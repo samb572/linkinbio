@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Edge Sports - Links</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+```
+    body {
+        font-family: 'Arial', sans-serif;
+        background: #111a29;
+        color: white;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    /* Animated background elements inspired by your header */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            linear-gradient(135deg, #111a29 0%, #1a2332 50%, #111a29 100%);
+        z-index: -2;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: 
+            conic-gradient(from 0deg at 20% 30%, transparent 0deg, rgba(59, 130, 246, 0.1) 60deg, transparent 120deg),
+            conic-gradient(from 180deg at 80% 70%, transparent 0deg, rgba(255, 215, 0, 0.1) 60deg, transparent 120deg);
+        animation: rotate 20s linear infinite;
+        z-index: -1;
+    }
+
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .container {
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        z-index: 1;
+    }
+
+    .logo-section {
+        margin-bottom: 40px;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .logo-container {
+        margin: 0 auto 20px;
+        text-align: center;
+    }
+
+    .clear-edge-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+    }
+
+    .clear-edge-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .brand-text {
+        margin-top: 15px;
+        font-family: 'Arial', sans-serif;
+        font-size: 32px;
+        font-weight: 900;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+    }
+
+    .tagline {
+        font-size: 14px;
+        color: #FFD700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+
+    .links-grid {
+        display: grid;
+        gap: 16px;
+        margin-top: 30px;
+    }
+
+    .link-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 215, 0, 0.2);
+        border-radius: 16px;
+        padding: 18px;
+        text-decoration: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .link-card:nth-child(1) { animation-delay: 0.2s; }
+    .link-card:nth-child(2) { animation-delay: 0.3s; }
+    .link-card:nth-child(3) { animation-delay: 0.4s; }
+    .link-card:nth-child(4) { animation-delay: 0.5s; }
+
+    .link-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .link-card:hover::before {
+        left: 100%;
+    }
+
+    .link-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        border-color: #FFD700;
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 
+            0 10px 30px rgba(255, 215, 0, 0.2),
+            0 0 20px rgba(255, 215, 0, 0.1);
+    }
+
+    .platform-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .tiktok-icon {
+        background: linear-gradient(135deg, #FF0050, #00F2EA);
+    }
+
+    .x-icon {
+        background: #000;
+        border: 1px solid #333;
+    }
+
+    .dubclub-icon img,
+    .chalkboard-icon img,
+    .tiktok-icon img,
+    .x-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .dubclub-icon {
+        background: transparent;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .chalkboard-icon {
+        background: transparent;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .link-content {
+        flex: 1;
+        text-align: left;
+    }
+
+    .link-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: white;
+    }
+
+    .link-subtitle {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.2;
+    }
+
+    .link-arrow {
+        font-size: 24px;
+        color: #FFD700;
+        transition: transform 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .link-card:hover .link-arrow {
+        transform: translateX(8px);
+    }
+
+    .footer {
+        margin-top: 40px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+        animation: fadeIn 1.2s ease-out 0.8s both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(40px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+        .container {
+            padding: 0 10px;
+        }
+        
+        .logo-container {
+            width: 180px;
+            height: 100px;
+        }
+        
+        .logo-text-clear,
+        .logo-text-edge {
+            font-size: 24px;
+        }
+        
+        .link-card {
+            padding: 16px;
+        }
+        
+        .platform-icon {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .link-title {
+            font-size: 16px;
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="container">
+        <div class="logo-section">
+            <div class="logo-container">
+                <div class="clear-edge-logo">
+                    <img src="https://i.imgur.com/nBn1UYd.jpeg" alt="Clear Edge CE Logo" />
+                </div>
+                <div class="brand-text">CLEAR EDGE</div>
+            </div>
+            <div class="tagline">PREDICT. WIN. REPEAT.</div>
+        </div>
+
+```
+    <div class="links-grid">
+        <a href="https://dubclub.win/StickballPicks/" class="link-card" target="_blank" rel="noopener noreferrer">
+            <div class="platform-icon dubclub-icon">
+                <img src="https://i.imgur.com/T4z6VsU.png" alt="DubClub" />
+            </div>
+            <div class="link-content">
+                <div class="link-title">DubClub</div>
+                <div class="link-subtitle">Join our premium picks community</div>
+            </div>
+            <div class="link-arrow">→</div>
+        </a>
+
+        <a href="https://www.tiktok.com/@clearedgesports?_t=ZP-8xXpA21eHPy&_r=1" class="link-card" target="_blank" rel="noopener noreferrer">
+            <div class="platform-icon tiktok-icon">
+                <img src="https://i.imgur.com/RoAN8LH.jpeg" alt="TikTok" />
+            </div>
+            <div class="link-content">
+                <div class="link-title">TikTok</div>
+                <div class="link-subtitle">Follow for daily sports picks & highlights</div>
+            </div>
+            <div class="link-arrow">→</div>
+        </a>
+
+        <a href="https://x.com/clearedgesports?s=21" class="link-card" target="_blank" rel="noopener noreferrer">
+            <div class="platform-icon x-icon">
+                <img src="https://i.imgur.com/lo3jPGf.jpeg" alt="X (Twitter)" />
+            </div>
+            <div class="link-content">
+                <div class="link-title">X (Twitter)</div>
+                <div class="link-subtitle">Real-time updates & betting insights</div>
+            </div>
+            <div class="link-arrow">→</div>
+        </a>
+
+        <a href="https://streaks.chalkboard.io/cUPZ/z2p3smua" class="link-card" target="_blank" rel="noopener noreferrer">
+            <div class="platform-icon chalkboard-icon">
+                <img src="https://i.imgur.com/brOJraA.png" alt="Chalkboard" />
+            </div>
+            <div class="link-content">
+                <div class="link-title">Chalkboard Fantasy</div>
+                <div class="link-subtitle">Use our exclusive promo code</div>
+            </div>
+            <div class="link-arrow">→</div>
+        </a>
+    </div>
+
+    <div class="footer">
+        © 2025 Clear Edge Sports • All Rights Reserved
+    </div>
+</div>
+```
+
+</body>
+</html>
