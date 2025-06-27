@@ -175,6 +175,16 @@
             text-align: center;
             position: relative;
             overflow: hidden;
+            /* Initial state for fade-in effect */
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        /* State when visible */
+        .profit-highlight.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .profit-highlight::before {
@@ -501,7 +511,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const linkCards = document.querySelectorAll('.link-card');
+            // Select all elements that should fade in on scroll
+            const animatedElements = document.querySelectorAll('.link-card, .profit-highlight');
 
             const observerOptions = {
                 root: null, // Use the viewport as the root
@@ -512,14 +523,17 @@
             const observer = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
+                        // Add the 'is-visible' class to trigger the fade-in
                         entry.target.classList.add('is-visible');
-                        observer.unobserve(entry.target); // Stop observing once it's visible
+                        // Stop observing once the element is visible
+                        observer.unobserve(entry.target); 
                     }
                 });
             }, observerOptions);
 
-            linkCards.forEach(card => {
-                observer.observe(card);
+            // Observe each element
+            animatedElements.forEach(element => {
+                observer.observe(element);
             });
         });
     </script>
