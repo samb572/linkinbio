@@ -347,6 +347,55 @@
             transform: translateX(10px);
         }
 
+        /* Review Ticker Styles */
+        .review-ticker-section {
+            width: 100%;
+            overflow: hidden; /* Hide overflowing text */
+            white-space: nowrap; /* Prevent text wrapping */
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 215, 0, 0.15);
+            border-radius: 12px;
+            padding: 15px 0; /* Padding top/bottom */
+            margin-top: 40px; /* Space from above section */
+            margin-bottom: 40px; /* Space from footer */
+            backdrop-filter: blur(15px);
+            position: relative;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+            animation: fadeInUp 0.8s ease-out 0.4s both; /* Fade in animation */
+        }
+
+        .review-ticker-content {
+            display: inline-block;
+            padding-left: 100%; /* Start off-screen to the right */
+            animation: ticker-move 40s linear infinite; /* Animation duration and type */
+        }
+
+        .review-ticker-content:hover {
+            animation-play-state: paused; /* Pause on hover */
+        }
+
+        .review-item {
+            display: inline-block;
+            margin-right: 60px; /* Space between reviews */
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .star-icon {
+            color: #FFD700; /* Gold color for stars */
+            margin-right: 5px;
+            font-size: 1.1em;
+            vertical-align: middle;
+        }
+
+        /* Ticker animation */
+        @keyframes ticker-move {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-100%); }
+        }
+
         .footer {
             font-size: 12px;
             color: rgba(255, 255, 255, 0.5);
@@ -423,6 +472,17 @@
             
             .link-subtitle {
                 font-size: 13px;
+            }
+
+            .review-ticker-section {
+                padding: 12px 0;
+                margin-top: 30px;
+                margin-bottom: 30px;
+            }
+
+            .review-item {
+                font-size: 14px;
+                margin-right: 40px;
             }
         }
     </style>
@@ -503,6 +563,17 @@
             </div>
         </div>
 
+        <div class="review-ticker-section">
+            <div class="review-ticker-content">
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Clear Edge transformed my betting! Their insights are unmatched." - A.D.</span>
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Finally a transparent and helpful service. Highly recommend!" - M.R.</span>
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Consistently profitable thanks to their expert picks." - S.K.</span>
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "The best betting community out there, truly a game changer." - L.P.</span>
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Their analysis is incredibly deep, I'm always impressed." - J.T.</span>
+                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Clear Edge made me a smarter bettor. Worth every penny!" - B.G.</span>
+            </div>
+        </div>
+
         <div class="footer">
             © 2025 Clear Edge Sports • All Rights Reserved<br>
             Professional Sports Analysis & Betting Insights
@@ -512,7 +583,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Select all elements that should fade in on scroll
-            const animatedElements = document.querySelectorAll('.link-card, .profit-highlight');
+            const animatedElements = document.querySelectorAll('.link-card, .profit-highlight, .review-ticker-section');
 
             const observerOptions = {
                 root: null, // Use the viewport as the root
