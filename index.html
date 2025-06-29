@@ -547,16 +547,23 @@
             backdrop-filter: blur(5px);
             z-index: 10000;
             display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .model-modal.show {
             display: block;
+            opacity: 1;
         }
 
         .model-modal-content {
             position: relative;
             width: 100%;
             height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+        }
             background: #0a0a0a;
         }
 
@@ -887,9 +894,56 @@
 
             // Show model modal
             function showModelModal() {
-                modelIframe.src = 'https://www.clearedge-sports.com/model.html';
+                console.log('Opening model modal...');
                 modelModal.classList.add('show');
                 document.body.style.overflow = 'hidden';
+                
+                // Try multiple URLs in order
+                const modelUrls = [
+                    './model.html',
+                    'model.html',
+                    'https://www.clearedge-sports.com/model.html'
+                ];
+                
+                let currentUrlIndex = 0;
+                
+                function tryLoadModel() {
+                    if (currentUrlIndex < modelUrls.length) {
+                        console.log('Trying to load:', modelUrls[currentUrlIndex]);
+                        modelIframe.src = modelUrls[currentUrlIndex];
+                        
+                        // Set a timeout to try next URL if this one fails
+                        setTimeout(() => {
+                            // Check if iframe has loaded content
+                            try {
+                                if (!modelIframe.contentDocument && !modelIframe.contentWindow) {
+                                    currentUrlIndex++;
+                                    tryLoadModel();
+                                }
+                            } catch (e) {
+                                // Cross-origin error means it's loading
+                                console.log('Model loading (cross-origin)');
+                            }
+                        }, 2000);
+                        
+                        currentUrlIndex++;
+                    } else {
+                        console.log('All URLs failed, showing error');
+                        modelIframe.srcdoc = `
+                            <html>
+                                <body style="background: #111a29; color: white; font-family: Arial; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+                                    <div style="text-align: center;">
+                                        <h2 style="color: #FFD700;">Model Loading...</h2>
+                                        <p>Please ensure model.html is uploaded to your website.</p>
+                                        <p>Expected location: https://www.clearedge-sports.com/model.html</p>
+                                    </div>
+                                </body>
+                            </html>
+                        `;
+                    }
+                }
+                
+                tryLoadModel();
             }
 
             // Hide model modal
