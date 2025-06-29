@@ -3,29 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clear Edge Sports - Premium Sports Betting Insights</title>
+    <title>NFL WR Reception Betting Model</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Arial', sans-serif;
-            background: #111a29;
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            background-attachment: fixed;
+            color: #ffffff;
             padding: 20px;
+            line-height: 1.6;
             position: relative;
             overflow-x: hidden;
         }
-
-        /* Enhanced animated background */
+        
         body::before {
             content: '';
             position: fixed;
@@ -33,765 +29,689 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                linear-gradient(135deg, #111a29 0%, #1a2332 30%, #0f1419 70%, #111a29 100%);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+                linear-gradient(45deg, rgba(59, 130, 246, 0.01) 0%, transparent 25%, rgba(99, 102, 241, 0.01) 50%, transparent 75%);
             z-index: -2;
         }
-
-        body::after {
-            content: '';
+        
+        .password-overlay {
             position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: 
-                conic-gradient(from 0deg at 25% 25%, transparent 0deg, rgba(59, 130, 246, 0.08) 45deg, transparent 90deg),
-                conic-gradient(from 180deg at 75% 75%, transparent 0deg, rgba(255, 215, 0, 0.08) 45deg, transparent 90deg),
-                conic-gradient(from 90deg at 50% 50%, transparent 0deg, rgba(139, 69, 19, 0.05) 30deg, transparent 60deg);
-            animation: rotate 25s linear infinite;
-            z-index: -1;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .container {
-            max-width: 480px;
-            width: 100%;
-            text-align: center;
-            z-index: 1;
-        }
-
-        .header-section {
-            margin-bottom: 50px;
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        .logo-container {
-            margin: 0 auto 25px;
-            text-align: center;
-        }
-
-        .clear-edge-logo {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 3px solid rgba(255, 215, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .clear-edge-logo:hover {
-            border-color: #FFD700;
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-        }
-
-        .clear-edge-logo img {
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-        }
-
-        .brand-text {
-            margin-top: 20px;
-            font-family: 'Arial', sans-serif;
-            font-size: 48px;
-            font-weight: 900;
-            color: white;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
-        }
-
-        .tagline {
-            font-size: 16px;
-            color: #FFD700;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            font-weight: 700;
-            margin-top: 15px;
-            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .about-section {
-            background: rgba(255, 255, 255, 0.03);
-            border: 2px solid rgba(255, 215, 0, 0.15);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 40px;
-            backdrop-filter: blur(15px);
-            position: relative;
-            overflow: hidden;
-            animation: fadeInUp 0.8s ease-out 0.2s both;
-        }
-
-        .about-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #FFD700, transparent);
-            animation: shimmer 3s ease-in-out infinite alternate;
-        }
-
-        @keyframes shimmer {
-            0% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-
-        .about-title {
-            font-size: 24px;
-            font-weight: 800;
-            color: #FFD700;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .about-content {
-            text-align: left;
-            line-height: 1.7;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 15px;
-        }
-
-        .about-content p {
-            margin-bottom: 16px;
-        }
-
-        .profit-highlight {
-            background: #111a29;
-            border: 2px solid #FFD700;
-            border-radius: 12px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            margin: 20px 0;
+        }
+        
+        .password-container {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.9) 100%);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 
+                0 15px 50px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                0 0 40px rgba(59, 130, 246, 0.05);
+            backdrop-filter: blur(15px);
             text-align: center;
-            position: relative;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+            max-width: 400px;
+            width: 100%;
         }
-
-        .profit-highlight.is-visible {
-            opacity: 1;
-            transform: translateY(0);
+        
+        .password-title {
+            color: #3b82f6;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
         }
-
-        .profit-highlight::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #FFD700, transparent);
-            animation: profit-glow 2s ease-in-out infinite alternate;
+        
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            background-color: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            margin: 20px 0;
         }
-
-        @keyframes profit-glow {
-            0% { opacity: 0.5; }
-            100% { opacity: 1; }
+        
+        .password-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
         }
-
-        .profit-number {
-            font-size: 28px;
-            font-weight: 900;
-            color: white;
+        
+        .password-error {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .main-content {
+            display: none;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 40px;
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .input-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(31, 41, 55, 0.8) 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
             display: block;
             margin-bottom: 8px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        .profit-text {
+            color: #94a3b8;
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background-color: rgba(15, 23, 42, 0.8);
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
         }
-
-        .links-grid {
-            display: grid;
-            gap: 18px;
-            margin-bottom: 40px;
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
         }
-
-        .link-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 215, 0, 0.2);
-            border-radius: 18px;
-            padding: 20px;
-            text-decoration: none;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            backdrop-filter: blur(15px);
-            position: relative;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-        }
-
-        .link-card.is-visible {
-            opacity: 1;
+        
+        .calculate-btn:active {
             transform: translateY(0);
         }
-
-        .link-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.15), transparent);
-            transition: left 0.6s ease;
-        }
-
-        .link-card:hover::before {
-            left: 100%;
-        }
-
-        .link-card:hover {
-            transform: translateY(-6px) scale(1.02);
-            border-color: #FFD700;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 
-                0 15px 40px rgba(255, 215, 0, 0.25),
-                0 0 25px rgba(255, 215, 0, 0.15);
-        }
-
-        .platform-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.3s ease;
-        }
-
-        .link-card:hover .platform-icon {
-            transform: scale(1.1);
-        }
-
-        .tiktok-icon {
-            background: linear-gradient(135deg, #FF0050, #00F2EA);
-        }
-
-        .x-icon {
-            background: #000;
-            border: 1px solid #333;
-        }
-
-        .dubclub-icon img,
-        .chalkboard-icon img,
-        .tiktok-icon img,
-        .x-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .dubclub-icon {
-            background: transparent;
-        }
-
-        .chalkboard-icon {
-            background: transparent;
-        }
-
-        .link-content {
-            flex: 1;
-            text-align: left;
-        }
-
-        .link-title {
-            font-size: 19px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: white;
-        }
-
-        .link-subtitle {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.75);
-            line-height: 1.3;
-        }
-
-        .link-arrow {
-            font-size: 26px;
-            color: #FFD700;
-            transition: transform 0.3s ease;
-            flex-shrink: 0;
-        }
-
-        .link-card:hover .link-arrow {
-            transform: translateX(10px);
-        }
-
-        .review-ticker-section {
-            width: 100%;
-            overflow: hidden;
-            white-space: nowrap;
-            background: rgba(255, 255, 255, 0.03);
-            border: 2px solid rgba(255, 215, 0, 0.15);
-            border-radius: 12px;
-            padding: 15px 0;
-            margin-top: 40px;
-            margin-bottom: 40px;
+        
+        .results {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.9) 100%);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(15px);
             position: relative;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-            animation: fadeInUp 0.8s ease-out 0.4s both;
         }
-
-        .review-ticker-content {
-            display: inline-block;
-            padding-left: 100%;
-            animation: ticker-move 40s linear infinite;
-        }
-
-        .review-ticker-content:hover {
-            animation-play-state: paused;
-        }
-
-        .review-item {
-            display: inline-block;
-            margin-right: 60px;
-            font-size: 15px;
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 500;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-        }
-
-        .star-icon {
-            color: #FFD700;
-            margin-right: 5px;
-            font-size: 1.1em;
-            vertical-align: middle;
-        }
-
-        @keyframes ticker-move {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-100%); }
-        }
-
-        .footer {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            animation: fadeIn 1.2s ease-out 1s both;
-            text-align: center;
-            padding: 20px 0;
-            position: relative;
-        }
-
-        /* Model Login Button Styles */
-        .model-login-btn {
-            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 15px;
-        }
-
-        .model-login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-        }
-
-        .model-login-btn svg {
-            width: 14px;
-            height: 14px;
-        }
-
-        /* Modal Styles */
-        .model-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(5px);
-            z-index: 9998;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .model-modal-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-
-        .model-modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            width: 90%;
-            max-width: 900px;
-            height: 90vh;
-            background: #0a0a0a;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            display: none;
-            opacity: 0;
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-
-        .model-modal-container.show {
-            display: block;
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .model-close-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 10;
+        
+        .result-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.2);
         }
-
-        .model-close-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: rotate(90deg);
+        
+        .result-item:last-child {
+            border-bottom: none;
         }
-
-        .model-iframe-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
+        
+        .result-label {
+            color: #94a3b8;
+            font-size: 14px;
         }
-
-        .model-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 20px;
+        
+        .result-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
         }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        
+        .final-score {
+            font-size: 32px !important;
+            color: #3b82f6 !important;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        
+        .score-interpretation {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
         }
-
-        /* Responsive */
+        
+        .score-high {
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        
+        .score-medium {
+            background-color: rgba(250, 204, 21, 0.1);
+            border: 1px solid rgba(250, 204, 21, 0.3);
+            color: #facc15;
+        }
+        
+        .score-low {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .game-context-scale {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #facc15;
+            padding: 20px;
+        }
+        
+        .error {
+            text-align: center;
+            color: #ef4444;
+            padding: 20px;
+        }
+        
+        .coverage-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .coverage-info h4 {
+            color: #3b82f6;
+            margin-bottom: 5px;
+        }
+        
         @media (max-width: 768px) {
-            .model-modal-container {
-                width: 95%;
-                height: 95vh;
-                border-radius: 15px;
+            body {
+                padding: 10px;
             }
             
-            .model-close-btn {
-                top: 10px;
-                right: 10px;
-                width: 35px;
-                height: 35px;
-                font-size: 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 0 10px;
+            h1 {
+                font-size: 2rem;
             }
             
-            .clear-edge-logo {
-                width: 100px;
-                height: 100px;
+            .input-card {
+                padding: 20px;
             }
             
-            .brand-text {
-                font-size: 36px;
-                letter-spacing: 3px;
-            }
-            
-            .tagline {
-                font-size: 14px;
-                letter-spacing: 2px;
-            }
-            
-            .about-section {
-                padding: 24px;
-            }
-            
-            .about-title {
-                font-size: 20px;
-            }
-            
-            .about-content {
-                font-size: 14px;
-            }
-            
-            .profit-number {
-                font-size: 24px;
-            }
-            
-            .link-card {
-                padding: 18px;
-            }
-            
-            .platform-icon {
-                width: 44px;
-                height: 44px;
-            }
-            
-            .link-title {
-                font-size: 17px;
-            }
-            
-            .link-subtitle {
-                font-size: 13px;
-            }
-
-            .review-ticker-section {
-                padding: 12px 0;
-                margin-top: 30px;
-                margin-bottom: 30px;
-            }
-
-            .review-item {
-                font-size: 14px;
-                margin-right: 40px;
+            .results {
+                padding: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-section">
-            <div class="logo-container">
-                <div class="clear-edge-logo">
-                    <img src="https://i.imgur.com/nBn1UYd.jpeg" alt="Clear Edge Sports Logo" />
-                </div>
-                <div class="brand-text">CLEAR EDGE</div>
-            </div>
-            <div class="tagline">PREDICT. WIN. REPEAT.</div>
-        </div>
-
-        <div class="review-ticker-section">
-            <div class="review-ticker-content">
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Clear Edge transformed my betting! Their insights are unmatched." - Anthony D.</span>
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Finally a transparent and helpful service. Highly recommend!" - Mark R.</span>
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Consistently profitable thanks to their expert picks." - Sam K.</span>
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "The best betting community out there, truly a game changer." - Logan P.</span>
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Their analysis is incredibly deep, I'm always impressed." - Jack T.</span>
-                <span class="review-item"><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span><span class="star-icon">★</span> "Clear Edge made me a smarter bettor. Worth every penny!" - Brian G.</span>
-            </div>
-        </div>
-
-        <div class="links-grid">
-            <a href="https://dubclub.win/utm/cam-ns5vp" class="link-card" target="_blank" rel="noopener noreferrer">
-                <div class="platform-icon dubclub-icon">
-                    <img src="https://i.imgur.com/T4z6VsU.png" alt="DubClub" />
-                </div>
-                <div class="link-content">
-                    <div class="link-title">DubClub Premium</div>
-                    <div class="link-subtitle">Free Trial Hold->Open Link</div>
-                </div>
-                <div class="link-arrow">→</div>
-            </a>
-
-            <a href="https://www.tiktok.com/@clearedgesports?_t=ZP-8xXpA21eHPy&_r=1" class="link-card" target="_blank" rel="noopener noreferrer">
-                <div class="platform-icon tiktok-icon">
-                    <img src="https://i.imgur.com/RoAN8LH.jpeg" alt="TikTok" />
-                </div>
-                <div class="link-content">
-                    <div class="link-title">TikTok</div>
-                    <div class="link-subtitle">Daily picks and analysis</div>
-                </div>
-                <div class="link-arrow">→</div>
-            </a>
-
-            <a href="https://x.com/clearedgesports?s=21" class="link-card" target="_blank" rel="noopener noreferrer">
-                <div class="platform-icon x-icon">
-                    <img src="https://i.imgur.com/lo3jPGf.jpeg" alt="X (Twitter)" />
-                </div>
-                <div class="link-content">
-                    <div class="link-title">X (Twitter)</div>
-                    <div class="link-subtitle">Real-time updates, live picks & market insights</div>
-                </div>
-                <div class="link-arrow">→</div>
-            </a>
-
-            <a href="https://streaks.chalkboard.io/cUPZ/z2p3smua" class="link-card" target="_blank" rel="noopener noreferrer">
-                <div class="platform-icon chalkboard-icon">
-                    <img src="https://i.imgur.com/brOJraA.png" alt="Chalkboard" />
-                </div>
-                <div class="link-content">
-                    <div class="link-title">Chalkboard Fantasy</div>
-                    <div class="link-subtitle">100% Deposit Match</div>
-                </div>
-                <div class="link-arrow">→</div>
-            </a>
-        </div>
-
-        <div class="about-section">
-            <h2 class="about-title">About Clear Edge</h2>
-            <div class="about-content">
-                <p>Welcome to Clear Edge Sports, where precision meets profitability in the world of sports betting. We're not just another picks service – we're your strategic advantage in the competitive landscape of sports wagering.</p>
-                
-                <p>Our team of expert analysts combines advanced statistical modeling, deep market research, and years of betting experience to deliver premium insights that consistently outperform the market. Every pick is carefully researched, thoroughly analyzed, and strategically selected to maximize your winning potential.</p>
-                
-                <div class="profit-highlight">
-                    <span class="profit-number">+441.51 UNITS</span>
-                    <span class="profit-text">Profitable Since June 2024</span>
-                </div>
-                
-                <p>What sets Clear Edge apart is our commitment to transparency and long-term success. We don't chase short-term wins or make unrealistic promises. Instead, we focus on sustainable, data-driven strategies that have proven their worth over time.</p>
-                
-                <p>Join thousands of successful bettors who trust Clear Edge Sports for their daily picks, in-depth analysis, and winning strategies. Whether you're a seasoned bettor or just starting out, we provide the tools and insights you need to stay ahead of the game.</p>
-            </div>
-        </div>
-
-        <div class="footer">
-            © 2025 Clear Edge Sports • All Rights Reserved<br>
-            Professional Sports Analysis & Betting Insights
-            <br>
-            <button class="model-login-btn" id="modelLoginBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Model Access
-            </button>
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-container">
+            <h2 class="password-title">Access Required</h2>
+            <input type="password" class="password-input" id="passwordInput" placeholder="Enter Password" autocomplete="off">
+            <button class="password-submit" id="passwordSubmit">UNLOCK</button>
+            <div class="password-error" id="passwordError">Incorrect password. Please try again.</div>
         </div>
     </div>
 
-    <!-- Modal Overlay -->
-    <div class="model-modal-overlay" id="modelModalOverlay"></div>
-    
-    <!-- Modal Container -->
-    <div class="model-modal-container" id="modelModalContainer">
-        <button class="model-close-btn" id="modelCloseBtn">×</button>
-        <div class="model-iframe-container">
-            <iframe class="model-iframe" id="modelIframe" src=""></iframe>
+    <div class="main-content" id="mainContent">
+        <div class="container">
+            <h1>NFL WR Reception Betting Model</h1>
+            
+            <div class="input-card">
+                <div class="input-group">
+                    <label for="playerName">Player Name</label>
+                    <input type="text" id="playerName" placeholder="e.g., Ja'Marr Chase">
+                </div>
+                
+                <div class="input-group">
+                    <label for="opponentTeam">Opponent Team</label>
+                    <input type="text" id="opponentTeam" placeholder="e.g., Jacksonville Jaguars or JAX">
+                </div>
+                
+                <div class="input-group">
+                    <label for="gameFlow">Expected Game Flow</label>
+                    <select id="gameFlow">
+                        <option value="3">Neutral (Even matchup)</option>
+                        <option value="1">Heavy Favorite (14+ point favorite)</option>
+                        <option value="2">Slight Favorite (7-13 point favorite)</option>
+                        <option value="4">Slight Underdog (7-13 point underdog)</option>
+                        <option value="5">Heavy Underdog (14+ point underdog)</option>
+                    </select>
+                    <div class="info-text">How the game script is expected to play out</div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="routesPerGame">Routes Per Game</label>
+                    <input type="number" id="routesPerGame" placeholder="e.g., 35" min="0" max="60" value="35">
+                    <div class="info-text">Average routes run per game by the player</div>
+                </div>
+                
+                <button class="calculate-btn" id="calculateBtn">Calculate Reception Projection</button>
+            </div>
+            
+            <div id="loadingDiv" class="loading" style="display: none;">
+                Calculating projection...
+            </div>
+            
+            <div id="errorDiv" class="error" style="display: none;"></div>
+            
+            <div class="results" id="results" style="display: none;">
+                <div id="coverageInfo" class="coverage-info"></div>
+                
+                <div class="result-item">
+                    <span class="result-label">Player</span>
+                    <span class="result-value" id="playerDisplay">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">vs Defense</span>
+                    <span class="result-value" id="defenseDisplay">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Target Share</span>
+                    <span class="result-value" id="targetShare">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">TPRR vs Coverage</span>
+                    <span class="result-value" id="tprrDisplay">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Separation Score</span>
+                    <span class="result-value" id="sepScoreDisplay">-</span>
+                </div>
+                <div class="result-item" style="margin-top: 10px; padding-top: 20px; border-top: 2px solid #3b82f6;">
+                    <span class="result-label" style="font-size: 18px;">Expected Receptions</span>
+                    <span class="result-value" id="expectedReceptions" style="font-size: 24px;">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label" style="font-size: 18px;">Reception Score</span>
+                    <span class="result-value final-score" id="finalScore">-</span>
+                </div>
+                <div class="score-interpretation" id="interpretation"></div>
+            </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
     <script>
-        // Animation observer for existing elements
-        document.addEventListener('DOMContentLoaded', () => {
-            const animatedElements = document.querySelectorAll('.link-card, .profit-highlight, .review-ticker-section');
+        // Initialize Supabase
+        let supabaseClient = null;
+        const SUPABASE_URL = 'https://pyjtwdgapmbdgtpflzan.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
+        const SEASON = 2024;
 
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.2
-            };
+        window.addEventListener('load', function() {
+            if (typeof window.supabase !== 'undefined') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else if (typeof Supabase !== 'undefined') {
+                supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            
+            setupPasswordHandling();
+            document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
+        });
 
-            const observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                        observer.unobserve(entry.target); 
-                    }
-                });
-            }, observerOptions);
+        function setupPasswordHandling() {
+            const passwordOverlay = document.getElementById('passwordOverlay');
+            const mainContent = document.getElementById('mainContent');
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordSubmitBtn = document.getElementById('passwordSubmit');
+            const passwordError = document.getElementById('passwordError');
 
-            animatedElements.forEach(element => {
-                observer.observe(element);
+            function checkPassword() {
+                const correctPassword = 'BALLSTICK';
+                if (passwordInput.value === correctPassword) {
+                    passwordOverlay.style.display = 'none';
+                    mainContent.style.display = 'block';
+                } else {
+                    passwordError.style.display = 'block';
+                    passwordInput.value = '';
+                    setTimeout(() => {
+                        passwordError.style.display = 'none';
+                    }, 3000);
+                }
+            }
+
+            passwordSubmitBtn.addEventListener('click', checkPassword);
+            passwordInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    checkPassword();
+                }
             });
-        });
 
-        // Model Login Functionality
-        const modelLoginBtn = document.getElementById('modelLoginBtn');
-        const modelModalOverlay = document.getElementById('modelModalOverlay');
-        const modelModalContainer = document.getElementById('modelModalContainer');
-        const modelCloseBtn = document.getElementById('modelCloseBtn');
-        const modelIframe = document.getElementById('modelIframe');
-
-        // Replace this with the actual path to your model HTML file
-        const MODEL_URL = 'model.html'; // Update this to your model's actual URL
-
-        modelLoginBtn.addEventListener('click', () => {
-            // Load the model in the iframe
-            modelIframe.src = MODEL_URL;
-            
-            // Show the modal
-            modelModalOverlay.classList.add('show');
-            modelModalContainer.classList.add('show');
-            
-            // Prevent body scroll
-            document.body.style.overflow = 'hidden';
-        });
-
-        function closeModal() {
-            modelModalOverlay.classList.remove('show');
-            modelModalContainer.classList.remove('show');
-            
-            // Re-enable body scroll
-            document.body.style.overflow = '';
-            
-            // Clear iframe after animation
-            setTimeout(() => {
-                modelIframe.src = '';
-            }, 300);
+            passwordInput.focus();
         }
 
-        modelCloseBtn.addEventListener('click', closeModal);
-        
-        modelModalOverlay.addEventListener('click', closeModal);
-
-        // Prevent closing when clicking inside the modal
-        modelModalContainer.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        // Close on Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modelModalContainer.classList.contains('show')) {
-                closeModal();
+        function normalizeTeamName(input) {
+            const teamMapping = {
+                'ARI': 'Arizona Cardinals', 'ATL': 'Atlanta Falcons', 'BAL': 'Baltimore Ravens',
+                'BUF': 'Buffalo Bills', 'CAR': 'Carolina Panthers', 'CHI': 'Chicago Bears',
+                'CIN': 'Cincinnati Bengals', 'CLE': 'Cleveland Browns', 'DAL': 'Dallas Cowboys',
+                'DEN': 'Denver Broncos', 'DET': 'Detroit Lions', 'GB': 'Green Bay Packers',
+                'HOU': 'Houston Texans', 'IND': 'Indianapolis Colts', 'JAX': 'Jacksonville Jaguars',
+                'KC': 'Kansas City Chiefs', 'LV': 'Las Vegas Raiders', 'LAC': 'Los Angeles Chargers',
+                'LAR': 'Los Angeles Rams', 'MIA': 'Miami Dolphins', 'MIN': 'Minnesota Vikings',
+                'NE': 'New England Patriots', 'NO': 'New Orleans Saints', 'NYG': 'New York Giants',
+                'NYJ': 'New York Jets', 'PHI': 'Philadelphia Eagles', 'PIT': 'Pittsburgh Steelers',
+                'SF': 'San Francisco 49ers', 'SEA': 'Seattle Seahawks', 'TB': 'Tampa Bay Buccaneers',
+                'TEN': 'Tennessee Titans', 'WAS': 'Washington Commanders'
+            };
+            
+            const upperInput = input.trim().toUpperCase();
+            if (teamMapping[upperInput]) {
+                return teamMapping[upperInput];
             }
-        });
+            
+            // Check if it's already a full name
+            for (const fullName of Object.values(teamMapping)) {
+                if (input.trim().toLowerCase() === fullName.toLowerCase()) {
+                    return fullName;
+                }
+            }
+            
+            return input.trim();
+        }
+
+        async function calculateProjection() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const opponentTeam = normalizeTeamName(document.getElementById('opponentTeam').value);
+            const gameFlow = parseInt(document.getElementById('gameFlow').value);
+            const routesPerGame = parseInt(document.getElementById('routesPerGame').value);
+
+            if (!playerName || !opponentTeam || !routesPerGame) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideResults();
+
+            try {
+                // 1. Get player's team and overall stats
+                const { data: playerData, error: playerError } = await supabaseClient
+                    .from('player_cover_stats')
+                    .select('team, tprr_player')
+                    .eq('player_name', playerName)
+                    .eq('season', SEASON)
+                    .eq('coverage_type', 'Overall')
+                    .limit(1);
+
+                if (playerError || !playerData || playerData.length === 0) {
+                    throw new Error(`Player "${playerName}" not found in database`);
+                }
+
+                const playerTeam = playerData[0].team;
+                const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
+
+                // 2. Get opponent's coverage frequencies
+                const { data: coverageData, error: coverageError } = await supabaseClient
+                    .from('defensive_coverages')
+                    .select('*')
+                    .eq('team_name', opponentTeam)
+                    .eq('season', SEASON)
+                    .limit(1);
+
+                if (coverageError || !coverageData || coverageData.length === 0) {
+                    throw new Error(`No coverage data found for ${opponentTeam}`);
+                }
+
+                const coverage = coverageData[0];
+                
+                // Find most frequent coverage
+                const coverageTypes = [
+                    { name: 'Man Coverage', pct: coverage.man_pct },
+                    { name: 'Cover 2', pct: coverage.cover_2_pct },
+                    { name: 'Cover 2 Man', pct: coverage.cover_2_man_pct },
+                    { name: 'Cover 3', pct: coverage.cover_3_pct },
+                    { name: 'Cover 4', pct: coverage.cover_4_pct },
+                    { name: 'Cover 6', pct: coverage.cover_6_pct }
+                ];
+
+                const validCoverages = coverageTypes.filter(c => c.pct > 0);
+                const mostFrequent = validCoverages.sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
+
+                // 3. Get player stats vs this coverage
+                const { data: playerStats, error: statsError } = await supabaseClient
+                    .from('player_cover_stats')
+                    .select('tprr_player, separation_score')
+                    .eq('player_name', playerName)
+                    .eq('team', playerTeam)
+                    .eq('season', SEASON)
+                    .eq('coverage_type', mostFrequent.name)
+                    .limit(1);
+
+                if (statsError || !playerStats || playerStats.length === 0) {
+                    throw new Error(`No stats found for ${playerName} vs ${mostFrequent.name}`);
+                }
+
+                const stats = playerStats[0];
+
+                // 4. Get defensive matchup stats
+                const { data: defStats, error: defError } = await supabaseClient
+                    .from('defensive_matchups')
+                    .select('tprr_allowed, catch_rate_allowed')
+                    .eq('defensive_team_name', opponentTeam)
+                    .eq('season', SEASON)
+                    .eq('coverage_type', mostFrequent.name)
+                    .limit(1);
+
+                const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
+
+                // 5. Calculate score
+                const result = calculateReceptionScore(
+                    stats.tprr_player * 100,
+                    stats.separation_score || 0.2,
+                    parseFloat(targetShare),
+                    routesPerGame,
+                    gameFlow,
+                    mostFrequent.pct,
+                    defMatchup.tprr_allowed * 100,
+                    defMatchup.catch_rate_allowed
+                );
+
+                // Display results
+                displayResults({
+                    playerName,
+                    playerTeam,
+                    opponentTeam,
+                    coverageType: mostFrequent.name,
+                    coverageFreq: mostFrequent.pct,
+                    targetShare,
+                    tprr: (stats.tprr_player * 100).toFixed(1),
+                    sepScore: stats.separation_score ? stats.separation_score.toFixed(3) : '0.200',
+                    expectedReceptions: result.expectedReceptions,
+                    receptionScore: result.finalScore
+                });
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function calculateReceptionScore(tprr, sepScore, targetShare, routesPerGame, gameFlow, coverageFreq, defTPRR, defCatchRate) {
+            // Coverage weight adjustment
+            let coverageWeight = coverageFreq / 100;
+            if (coverageFreq >= 35) {
+                coverageWeight = (coverageFreq / 100) * 1.2;
+            } else if (coverageFreq < 15) {
+                coverageWeight = (coverageFreq / 100) * 0.4;
+            }
+
+            // Weighted TPRR
+            const estimatedBaseTPRR = targetShare * 0.85;
+            const weightedTPRR = (tprr * coverageWeight) + (estimatedBaseTPRR * (1 - coverageWeight));
+
+            // Coverage Adjusted TPRR (squared)
+            const coverageAdjBase = (weightedTPRR / 25) * 10;
+            const coverageAdjTPRR = Math.pow(Math.min(coverageAdjBase, 12), 2);
+
+            // Normalized Separation (squared)
+            const sepBase = (sepScore / 0.25) * 10;
+            const normalizedSep = Math.pow(Math.min(sepBase, 12), 2);
+
+            // Volume Factor
+            const volumeFactor = Math.min((targetShare * routesPerGame) / 100, 100);
+
+            // Matchup Factor
+            const defTPRRDiff = Math.max(0, defTPRR - 18.5);
+            const defCatchDiff = Math.max(0, defCatchRate - 63);
+            const matchupFactor = (defTPRRDiff + defCatchDiff) / 2;
+
+            // Game Context Factor
+            const gameContextFactor = (gameFlow - 1) * 25;
+
+            // Base Score
+            const baseScore = (0.35 * coverageAdjTPRR) + 
+                            (0.25 * normalizedSep) + 
+                            (0.20 * volumeFactor) + 
+                            (0.15 * matchupFactor) + 
+                            (0.10 * gameContextFactor);
+
+            // Quality Multiplier
+            let qualityMultiplier = 1.0;
+            if (tprr < 20) {
+                qualityMultiplier = 0.75;
+            }
+
+            const finalScore = baseScore * qualityMultiplier;
+
+            // Expected Receptions
+            const gameFlowMultiplier = 0.8 + (gameFlow * 0.1);
+            const expectedReceptions = (routesPerGame * (weightedTPRR / 100) * (defCatchRate / 100) * gameFlowMultiplier).toFixed(1);
+
+            return {
+                finalScore: finalScore.toFixed(1),
+                expectedReceptions
+            };
+        }
+
+        function displayResults(data) {
+            document.getElementById('coverageInfo').innerHTML = `
+                <h4>Primary Coverage: ${data.coverageType}</h4>
+                <p>${data.coverageFreq.toFixed(1)}% frequency</p>
+            `;
+            
+            document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`;
+            document.getElementById('defenseDisplay').textContent = data.opponentTeam;
+            document.getElementById('targetShare').textContent = `${data.targetShare}%`;
+            document.getElementById('tprrDisplay').textContent = `${data.tprr}%`;
+            document.getElementById('sepScoreDisplay').textContent = data.sepScore;
+            document.getElementById('expectedReceptions').textContent = data.expectedReceptions;
+            document.getElementById('finalScore').textContent = data.receptionScore;
+
+            let interpretation = '';
+            let interpretClass = '';
+
+            if (data.receptionScore >= 80) {
+                interpretation = 'EXCELLENT BET - Strong value, high confidence';
+                interpretClass = 'score-high';
+            } else if (data.receptionScore >= 60) {
+                interpretation = 'GOOD BET - Positive indicators, moderate confidence';
+                interpretClass = 'score-medium';
+            } else if (data.receptionScore >= 40) {
+                interpretation = 'NEUTRAL - Mixed signals, proceed with caution';
+                interpretClass = 'score-medium';
+            } else {
+                interpretation = 'POOR BET - Negative indicators, avoid';
+                interpretClass = 'score-low';
+            }
+
+            const interpretDiv = document.getElementById('interpretation');
+            interpretDiv.textContent = interpretation;
+            interpretDiv.className = 'score-interpretation ' + interpretClass;
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingDiv').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDiv');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorDiv').style.display = 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('results').style.display = 'none';
+        }
     </script>
 </body>
 </html>
