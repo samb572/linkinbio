@@ -782,9 +782,24 @@
 
         const finalScore = baseScore * qualityMultiplier;
 
-        // Expected Receptions
+        // Reception Score Confidence Multiplier
+        let confidenceMultiplier = 1.0;
+        if (finalScore < 50) {
+            confidenceMultiplier = 0.85;  // 15% reduction for poor confidence
+        } else if (finalScore < 65) {
+            confidenceMultiplier = 0.95;  // 5% reduction for below average
+        } else if (finalScore < 75) {
+            confidenceMultiplier = 1.05;  // 5% boost for good confidence
+        } else if (finalScore < 85) {
+            confidenceMultiplier = 1.15;  // 15% boost for high confidence
+        } else {
+            confidenceMultiplier = 1.25;  // 25% boost for excellent confidence
+        }
+
+        // Expected Receptions (with confidence adjustment)
         const gameFlowMultiplier = 0.8 + (gameFlow * 0.1);
-        const expectedReceptions = (routesPerGame * (adjustedTPRR / 100) * (defCatchRate / 100) * gameFlowMultiplier).toFixed(1);
+        const baseExpectedReceptions = routesPerGame * (adjustedTPRR / 100) * (defCatchRate / 100) * gameFlowMultiplier;
+        const expectedReceptions = (baseExpectedReceptions * confidenceMultiplier).toFixed(1);
 
         return {
             finalScore: finalScore.toFixed(1),
