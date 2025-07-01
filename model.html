@@ -421,29 +421,14 @@
             color: rgba(255, 255, 255, 0.7);
         }
 
-        .edge-score {
-            font-size: 18px;
+        .projection-score {
+            font-size: 20px;
             font-weight: 800;
             padding: 5px 12px;
             border-radius: 8px;
-        }
-
-        .edge-positive {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-
-        .edge-neutral {
             background: rgba(255, 215, 0, 0.2);
             color: #FFD700;
             border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .edge-negative {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         .result-details {
@@ -832,16 +817,6 @@
                             <option value="5">Heavy Underdog (14+ point underdog)</option>
                         </select>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="bulkMinEdge">Minimum Edge</label>
-                        <select id="bulkMinEdge">
-                            <option value="0">Show All</option>
-                            <option value="1">+1.0 or better</option>
-                            <option value="1.5">+1.5 or better</option>
-                            <option value="2">+2.0 or better</option>
-                        </select>
-                    </div>
                 </div>
                 
                 <button class="calculate-btn" id="bulkCalculateBtn">Run Bulk Analysis</button>
@@ -921,10 +896,18 @@
         let bulkResults = [];
 
         window.addEventListener('load', function() {
-            if (typeof window.supabase !== 'undefined') {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else if (typeof Supabase !== 'undefined') {
-                supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('Supabase client initialized successfully');
+                } else if (typeof Supabase !== 'undefined') {
+                    supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('Supabase client initialized successfully (alt)');
+                } else {
+                    console.error('Supabase library not loaded');
+                }
+            } catch (error) {
+                console.error('Error initializing Supabase:', error);
             }
             
             setupPasswordHandling();
@@ -1019,7 +1002,6 @@
             const week = document.getElementById('bulkWeek').value;
             const team = document.getElementById('bulkTeam').value;
             const gameFlow = parseInt(document.getElementById('bulkGameFlow').value);
-            const minEdge = parseFloat(document.getElementById('bulkMinEdge').value);
 
             showBulkLoading(true);
             hideBulkResults();
@@ -1027,6 +1009,21 @@
             bulkResults = [];
 
             try {
+                console.log('Starting bulk analysis...');
+                
+                // Test Supabase connection first
+                const { data: testData, error: testError } = await supabaseClient
+                    .from('player_cover_stats')
+                    .select('count')
+                    .limit(1);
+
+                if (testError) {
+                    console.error('Supabase connection test failed:', testError);
+                    throw new Error('Database connection failed: ' + testError.message);
+                }
+
+                console.log('Database connection successful');
+
                 // Get matchups based on filters
                 let matchupsQuery = supabaseClient
                     .from('weekly_matchups')
@@ -1037,32 +1034,43 @@
                     matchupsQuery = matchupsQuery.eq('week', parseInt(week));
                 }
 
+                console.log('Fetching matchups...');
                 const { data: matchups, error: matchupError } = await matchupsQuery;
 
                 if (matchupError) {
+                    console.error('Matchups error:', matchupError);
                     throw new Error('Error fetching matchups: ' + matchupError.message);
                 }
+
+                console.log(`Found ${matchups?.length || 0} matchups`);
 
                 // Get all players for the selected team or all teams
                 let playerQuery = supabaseClient
                     .from('player_cover_stats')
-                    .select('player_name, team')
+                    .select('player_name, team, tprr_player')
                     .eq('season', SEASON)
-                    .eq('coverage_type', 'Overall');
+                    .eq('coverage_type', 'Overall')
+                    .order('tprr_player', { ascending: false }); // Order by target rate
 
                 if (team) {
                     playerQuery = playerQuery.eq('team', team);
                 }
 
+                console.log('Fetching players...');
                 const { data: players, error: playerError } = await playerQuery;
 
                 if (playerError) {
+                    console.error('Players error:', playerError);
                     throw new Error('Error fetching players: ' + playerError.message);
                 }
 
-                const uniquePlayers = [...new Map(players.map(p => [p.player_name, p])).values()];
+                console.log(`Found ${players?.length || 0} players`);
+
+                // Get unique players and limit to top 50 by target rate
+                const uniquePlayers = [...new Map(players.map(p => [p.player_name, p])).values()]
+                    .slice(0, 50); // Limit to top 50 players by target rate
                 
-                updateProgress(0, `Starting analysis of ${uniquePlayers.length} players...`);
+                updateProgress(0, `Starting analysis of top ${uniquePlayers.length} players...`);
 
                 // Process each player against their matchups
                 for (let i = 0; i < uniquePlayers.length; i++) {
@@ -1083,10 +1091,10 @@
                                 opponent,
                                 gameFlow,
                                 35, // Default routes per game
-                                5.5 // Default betting line
+                                5.5 // Default betting line for comparison
                             );
 
-                            if (result && result.edgeScore >= minEdge) {
+                            if (result) {
                                 bulkResults.push({
                                     ...result,
                                     week: matchup.week,
@@ -1099,12 +1107,16 @@
                     }
                 }
 
-                // Sort results by edge score
-                bulkResults.sort((a, b) => b.edgeScore - a.edgeScore);
+                // Sort results by projected receptions (highest first)
+                bulkResults.sort((a, b) => parseFloat(b.expectedReceptions) - parseFloat(a.expectedReceptions));
+
+                // Limit to top 50 results
+                bulkResults = bulkResults.slice(0, 50);
 
                 displayBulkResults();
 
             } catch (error) {
+                console.error('Bulk analysis error:', error);
                 showError(error.message);
             } finally {
                 showBulkLoading(false);
@@ -1112,120 +1124,178 @@
         }
 
         async function calculatePlayerProjection(playerName, opponentTeam, gameFlow, routesPerGame, bettingLine) {
-            // Get player's team and overall stats
-            const { data: playerData, error: playerError } = await supabaseClient
-                .from('player_cover_stats')
-                .select('team, tprr_player')
-                .eq('player_name', playerName)
-                .eq('season', SEASON)
-                .eq('coverage_type', 'Overall')
-                .limit(1);
+            try {
+                // Get player's team and overall stats
+                const { data: playerData, error: playerError } = await supabaseClient
+                    .from('player_cover_stats')
+                    .select('team, tprr_player')
+                    .eq('player_name', playerName)
+                    .eq('season', SEASON)
+                    .eq('coverage_type', 'Overall')
+                    .limit(1);
 
-            if (playerError || !playerData || playerData.length === 0) {
-                throw new Error(`Player "${playerName}" not found`);
-            }
-
-            const playerTeam = playerData[0].team;
-            const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
-
-            // Get opponent's coverage frequencies
-            const { data: coverageData, error: coverageError } = await supabaseClient
-                .from('defensive_coverages')
-                .select('*')
-                .eq('team_name', opponentTeam)
-                .eq('season', SEASON)
-                .limit(1);
-
-            if (coverageError || !coverageData || coverageData.length === 0) {
-                throw new Error(`No coverage data found for ${opponentTeam}`);
-            }
-
-            const coverage = coverageData[0];
-            
-            const coverageTypes = [
-                { name: 'Man Coverage', pct: coverage.man_pct },
-                { name: 'Cover 2', pct: coverage.cover_2_pct },
-                { name: 'Cover 3', pct: coverage.cover_3_pct },
-                { name: 'Cover 4', pct: coverage.cover_4_pct },
-                { name: 'Cover 6', pct: coverage.cover_6_pct }
-            ];
-
-            // Get player stats for ALL coverage types
-            const { data: playerStats, error: statsError } = await supabaseClient
-                .from('player_cover_stats')
-                .select('coverage_type, tprr_player, separation_score')
-                .eq('player_name', playerName)
-                .eq('team', playerTeam)
-                .eq('season', SEASON)
-                .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
-
-            if (statsError || !playerStats || playerStats.length === 0) {
-                throw new Error(`No coverage stats found for ${playerName}`);
-            }
-
-            // Calculate weighted TPRR and separation scores
-            let weightedTPRR = 0;
-            let weightedSeparation = 0;
-            let totalWeight = 0;
-
-            coverageTypes.forEach(coverage => {
-                if (coverage.pct > 0) {
-                    const playerStat = playerStats.find(s => s.coverage_type === coverage.name);
-                    if (playerStat) {
-                        const weight = coverage.pct / 100;
-                        weightedTPRR += (playerStat.tprr_player * 100) * weight;
-                        weightedSeparation += (playerStat.separation_score || 0.2) * weight;
-                        totalWeight += weight;
-                    }
+                if (playerError) {
+                    throw new Error(`Player error for ${playerName}: ${playerError.message}`);
                 }
-            });
 
-            if (totalWeight === 0) {
-                throw new Error(`No valid coverage data found for ${playerName}`);
+                if (!playerData || playerData.length === 0) {
+                    throw new Error(`Player "${playerName}" not found`);
+                }
+
+                const playerTeam = playerData[0].team;
+                const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
+
+                // Get opponent's coverage frequencies
+                const { data: coverageData, error: coverageError } = await supabaseClient
+                    .from('defensive_coverages')
+                    .select('*')
+                    .eq('team_name', opponentTeam)
+                    .eq('season', SEASON)
+                    .limit(1);
+
+                if (coverageError) {
+                    throw new Error(`Coverage error for ${opponentTeam}: ${coverageError.message}`);
+                }
+
+                if (!coverageData || coverageData.length === 0) {
+                    // Use default coverage if not found
+                    console.log(`No coverage data for ${opponentTeam}, using defaults`);
+                    const defaultCoverage = {
+                        man_pct: 25,
+                        cover_2_pct: 15,
+                        cover_3_pct: 35,
+                        cover_4_pct: 15,
+                        cover_6_pct: 10
+                    };
+                    
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    return {
+                        ...result,
+                        bettingLine: bettingLine
+                    };
+                }
+
+                const coverage = coverageData[0];
+                
+                const coverageTypes = [
+                    { name: 'Man Coverage', pct: coverage.man_pct },
+                    { name: 'Cover 2', pct: coverage.cover_2_pct },
+                    { name: 'Cover 3', pct: coverage.cover_3_pct },
+                    { name: 'Cover 4', pct: coverage.cover_4_pct },
+                    { name: 'Cover 6', pct: coverage.cover_6_pct }
+                ];
+
+                // Get player stats for ALL coverage types
+                const { data: playerStats, error: statsError } = await supabaseClient
+                    .from('player_cover_stats')
+                    .select('coverage_type, tprr_player, separation_score')
+                    .eq('player_name', playerName)
+                    .eq('team', playerTeam)
+                    .eq('season', SEASON)
+                    .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
+
+                if (statsError) {
+                    throw new Error(`Stats error for ${playerName}: ${statsError.message}`);
+                }
+
+                if (!playerStats || playerStats.length === 0) {
+                    // Use simple projection if no detailed stats
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    return {
+                        ...result,
+                        bettingLine: bettingLine
+                    };
+                }
+
+                // Calculate weighted TPRR and separation scores
+                let weightedTPRR = 0;
+                let weightedSeparation = 0;
+                let totalWeight = 0;
+
+                coverageTypes.forEach(coverage => {
+                    if (coverage.pct > 0) {
+                        const playerStat = playerStats.find(s => s.coverage_type === coverage.name);
+                        if (playerStat) {
+                            const weight = coverage.pct / 100;
+                            weightedTPRR += (playerStat.tprr_player * 100) * weight;
+                            weightedSeparation += (playerStat.separation_score || 0.2) * weight;
+                            totalWeight += weight;
+                        }
+                    }
+                });
+
+                if (totalWeight === 0) {
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    return {
+                        ...result,
+                        bettingLine: bettingLine
+                    };
+                }
+
+                const stats = {
+                    tprr_player: weightedTPRR / totalWeight,
+                    separation_score: weightedSeparation / totalWeight
+                };
+
+                const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
+
+                // Get defensive matchup stats (optional)
+                const { data: defStats } = await supabaseClient
+                    .from('defensive_matchups')
+                    .select('tprr_allowed, catch_rate_allowed')
+                    .eq('defensive_team_name', opponentTeam)
+                    .eq('season', SEASON)
+                    .eq('coverage_type', mostFrequent.name)
+                    .limit(1);
+
+                const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
+
+                const result = calculateReceptionScore(
+                    stats.tprr_player,
+                    stats.separation_score,
+                    parseFloat(targetShare),
+                    routesPerGame,
+                    gameFlow,
+                    mostFrequent.pct,
+                    defMatchup.tprr_allowed * 100,
+                    defMatchup.catch_rate_allowed
+                );
+
+                const projection = parseFloat(result.expectedReceptions);
+                const edgeScore = projection - bettingLine;
+
+                return {
+                    playerName,
+                    playerTeam,
+                    opponentTeam,
+                    targetShare,
+                    tprr: stats.tprr_player.toFixed(1),
+                    sepScore: stats.separation_score.toFixed(3),
+                    expectedReceptions: result.expectedReceptions,
+                    bettingLine: bettingLine,
+                    edgeScore: edgeScore
+                };
+
+            } catch (error) {
+                console.error(`Error in calculatePlayerProjection for ${playerName}:`, error);
+                throw error;
             }
+        }
 
-            const stats = {
-                tprr_player: weightedTPRR / totalWeight,
-                separation_score: weightedSeparation / totalWeight
-            };
-
-            const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
-
-            // Get defensive matchup stats
-            const { data: defStats, error: defError } = await supabaseClient
-                .from('defensive_matchups')
-                .select('tprr_allowed, catch_rate_allowed')
-                .eq('defensive_team_name', opponentTeam)
-                .eq('season', SEASON)
-                .eq('coverage_type', mostFrequent.name)
-                .limit(1);
-
-            const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
-
-            const result = calculateReceptionScore(
-                stats.tprr_player,
-                stats.separation_score,
-                parseFloat(targetShare),
-                routesPerGame,
-                gameFlow,
-                mostFrequent.pct,
-                defMatchup.tprr_allowed * 100,
-                defMatchup.catch_rate_allowed
-            );
-
-            const projection = parseFloat(result.expectedReceptions);
-            const edgeScore = projection - bettingLine;
-
+        function calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow) {
+            // Simple projection when detailed data is not available
+            const gameScriptMultiplier = 0.85 + (gameFlow * 0.075);
+            const baseProjection = routesPerGame * (parseFloat(targetShare) / 100) * 0.65 * gameScriptMultiplier; // 65% catch rate assumption
+            
             return {
                 playerName,
                 playerTeam,
                 opponentTeam,
                 targetShare,
-                tprr: stats.tprr_player.toFixed(1),
-                sepScore: stats.separation_score.toFixed(3),
-                expectedReceptions: result.expectedReceptions,
-                bettingLine: bettingLine,
-                edgeScore: edgeScore
+                tprr: targetShare,
+                sepScore: "0.200", // Default separation
+                expectedReceptions: baseProjection.toFixed(1),
+                edgeScore: 0
             };
         }
 
@@ -1233,7 +1303,7 @@
             const resultsCount = document.getElementById('resultsCount');
             const resultsList = document.getElementById('bulkResultsList');
             
-            resultsCount.textContent = `${bulkResults.length} players analyzed`;
+            resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`;
             
             if (bulkResults.length === 0) {
                 resultsList.innerHTML = '<div class="loading">No players found matching criteria</div>';
@@ -1241,25 +1311,21 @@
                 return;
             }
 
-            resultsList.innerHTML = bulkResults.map(result => `
+            resultsList.innerHTML = bulkResults.map((result, index) => `
                 <div class="bulk-result-item">
                     <div class="result-header">
                         <div>
-                            <div class="player-info">${result.playerName} (${result.playerTeam})</div>
+                            <div class="player-info">#${index + 1} ${result.playerName} (${result.playerTeam})</div>
                             <div class="matchup-info">Week ${result.week} - ${result.matchup}</div>
                         </div>
-                        <div class="edge-score ${getEdgeClass(result.edgeScore)}">
-                            ${result.edgeScore >= 0 ? '+' : ''}${result.edgeScore.toFixed(1)}
+                        <div class="projection-score">
+                            ${result.expectedReceptions} rec
                         </div>
                     </div>
                     <div class="result-details">
                         <div class="detail-item">
                             <div class="detail-label">Projection</div>
                             <div class="detail-value">${result.expectedReceptions}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Line</div>
-                            <div class="detail-value">${result.bettingLine}</div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">Target Share</div>
@@ -1277,17 +1343,15 @@
                             <div class="detail-label">vs</div>
                             <div class="detail-value">${result.opponentTeam}</div>
                         </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Week</div>
+                            <div class="detail-value">${result.week}</div>
+                        </div>
                     </div>
                 </div>
             `).join('');
 
             document.getElementById('bulkResults').style.display = 'block';
-        }
-
-        function getEdgeClass(edgeScore) {
-            if (edgeScore >= 1.5) return 'edge-positive';
-            if (edgeScore >= 0) return 'edge-neutral';
-            return 'edge-negative';
         }
 
         function updateProgress(percentage, text) {
@@ -1310,16 +1374,15 @@
             if (bulkResults.length === 0) return;
 
             const csvContent = [
-                ['Player', 'Team', 'Week', 'Matchup', 'Opponent', 'Projection', 'Line', 'Edge', 'Target Share', 'TPRR', 'Separation'].join(','),
-                ...bulkResults.map(result => [
+                ['Rank', 'Player', 'Team', 'Week', 'Matchup', 'Opponent', 'Projection', 'Target Share', 'TPRR', 'Separation'].join(','),
+                ...bulkResults.map((result, index) => [
+                    index + 1,
                     result.playerName,
                     result.playerTeam,
                     result.week,
                     result.matchup,
                     result.opponentTeam,
                     result.expectedReceptions,
-                    result.bettingLine,
-                    result.edgeScore.toFixed(1),
                     result.targetShare + '%',
                     result.tprr + '%',
                     result.sepScore
@@ -1330,7 +1393,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `nfl-bulk-analysis-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `nfl-top-projections-${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         }
