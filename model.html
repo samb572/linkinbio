@@ -863,7 +863,7 @@
     <script>
         // Define Supabase constants globally, BEFORE any other logic
         const SUPABASE_URL = 'https://pyjtwdgapmbdgtpflzan.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo'; // Ensure this key is correct and not publicly exposed in a real app!
         
         // Use consistent season approach
         const PLAYER_STATS_SEASON = 2024; // Always use 2024 for player stats and defensive data
@@ -915,10 +915,29 @@
 
         // Utility function to get abbreviation from full name
         function getTeamAbbreviation(fullName) {
-            // Trim whitespace and handle potential case differences if necessary
-            // For now, assuming full name from DB will match map keys exactly
-            return teamAbbreviationMap[fullName] || fullName; 
+            // This function is crucial. It ensures consistency when querying DB.
+            // It also handles cases where the input might already be an abbreviation or slightly off.
+            for (const key in teamAbbreviationMap) {
+                if (key.toLowerCase() === fullName.toLowerCase()) {
+                    return teamAbbreviationMap[key]; // Found full name, return abbreviation
+                }
+                if (teamAbbreviationMap[key].toLowerCase() === fullName.toLowerCase()) {
+                    return teamAbbreviationMap[key]; // Input was already a valid abbreviation
+                }
+            }
+            return fullName.toUpperCase(); // Fallback: try to upper-case the input assuming it's an abbr
         }
+
+        // Utility function to get full name from abbreviation
+        function getFullTeamName(abbr) {
+            for (const fullName in teamAbbreviationMap) {
+                if (teamAbbreviationMap[fullName].toLowerCase() === abbr.toLowerCase()) {
+                    return fullName;
+                }
+            }
+            return abbr.toUpperCase(); // Fallback: return the abbreviation if no full name found
+        }
+
 
         window.addEventListener('load', function() {
             setupPasswordHandling();
@@ -941,7 +960,7 @@
             const passwordError = document.getElementById('passwordError');
 
             function checkPassword() {
-                const correctPassword = 'KT81qd2023#';
+                const correctPassword = 'KT81qd2023#'; // CHANGE THIS TO A SECURE, ENVIRONMENT VARIABLE IN PRODUCTION
                 if (passwordInput.value === correctPassword) {
                     passwordOverlay.style.display = 'none';
                     mainContent.style.display = 'block';
@@ -1026,9 +1045,10 @@
                 updateProgress(5, `Connection verified. Fetching matchups for ${MATCHUPS_SEASON}...`);
 
                 // STEP 1: Get matchups based on filters (using MATCHUPS_SEASON for weekly_matchups)
+                // weekly_matchups contains 'home_team' and 'away_team' as FULL NAMES
                 let matchupsQuery = supabaseClient
                     .from('weekly_matchups')
-                    .select('*')
+                    .select('*, home_team, away_team, week') // Explicitly select columns needed
                     .eq('season', MATCHUPS_SEASON); 
 
                 if (week) {
@@ -1056,33 +1076,34 @@
                 console.log(`Found ${matchups.length} matchups for Season ${MATCHUPS_SEASON}.`);
                 updateProgress(10, `Found ${matchups.length} matchups. Getting team list from matchups...`);
 
-                // STEP 2: Extract all teams that have games AND CONVERT TO ABBREVIATIONS
-                const teamsWithGames = new Set();
+                // STEP 2: Extract all teams that have games AND CONVERT TO ABBREVIATIONS FOR PLAYER STATS JOIN
+                const teamsWithGamesAbbr = new Set();
                 matchups.forEach(matchup => {
-                    teamsWithGames.add(getTeamAbbreviation(matchup.home_team));
-                    teamsWithGames.add(getTeamAbbreviation(matchup.away_team));
+                    teamsWithGamesAbbr.add(getTeamAbbreviation(matchup.home_team)); // Convert to abbr
+                    teamsWithGamesAbbr.add(getTeamAbbreviation(matchup.away_team)); // Convert to abbr
                 });
                 
                 // DEBUGGING POINT 2 (updated)
-                console.log(`Teams with games (from 2025 matchups, converted to abbreviations):`, Array.from(teamsWithGames));
+                console.log(`Teams with games (from 2025 matchups, converted to abbreviations):`, Array.from(teamsWithGamesAbbr));
 
-                if (teamsWithGames.size === 0) {
+                if (teamsWithGamesAbbr.size === 0) {
                     console.warn('No teams found in 2025 matchups or unable to convert to abbreviations. Check matchup data and teamAbbreviationMap.');
                     showError('No teams identified from 2025 matchups. Ensure data exists in weekly_matchups table and team names can be abbreviated.');
                     showBulkLoading(false);
                     return;
                 }
 
-                updateProgress(15, `Found ${teamsWithGames.size} teams with games. Fetching players...`);
+                updateProgress(15, `Found ${teamsWithGamesAbbr.size} teams with games. Fetching players...`);
 
                 // STEP 3: Get players ONLY from teams that have games in the matchups
-                console.log(`Fetching top players from Season ${PLAYER_STATS_SEASON} for teams with games: ${Array.from(teamsWithGames).join(', ')}`);
+                // player_cover_stats.team should store abbreviations
+                console.log(`Fetching top players from Season ${PLAYER_STATS_SEASON} for teams with games: ${Array.from(teamsWithGamesAbbr).join(', ')}`);
                 const { data: players, error: playerError } = await supabaseClient
                     .from('player_cover_stats')
                     .select('player_name, team, tprr_player')
                     .eq('season', PLAYER_STATS_SEASON)
                     .eq('coverage_type', 'Overall')
-                    .in('team', Array.from(teamsWithGames)) // THIS NOW USES ABBREVIATIONS
+                    .in('team', Array.from(teamsWithGamesAbbr)) // THIS NOW USES ABBREVIATIONS
                     .gte('tprr_player', 0.08) // Minimum target rate
                     .order('tprr_player', { ascending: false })
                     .limit(200); // Get more players to ensure good coverage
@@ -1096,7 +1117,7 @@
                 console.log(`Fetched Players (Season 2024, filtered by 2025 teams):`, players);
 
                 if (!players || players.length === 0) {
-                    console.warn(`No players found for teams with games (Season ${PLAYER_STATS_SEASON}, Teams: ${Array.from(teamsWithGames).join(', ')}).`);
+                    console.warn(`No players found for teams with games (Season ${PLAYER_STATS_SEASON}, Teams: ${Array.from(teamsWithGamesAbbr).join(', ')}).`);
                     showError(`No players found for teams with games (Season ${PLAYER_STATS_SEASON}). Please check that player data exists for these teams and team names match abbreviations.`);
                     showBulkLoading(false);
                     return;
@@ -1109,17 +1130,25 @@
                 const playerMatchupCombos = [];
                 
                 players.forEach(player => {
-                    // Matchup team names are full names, player team is abbreviation
+                    // Filter matchups where player's team (abbreviation) matches home or away team (converted to abbreviation)
                     const playerMatchups = matchups.filter(matchup => 
                         getTeamAbbreviation(matchup.home_team) === player.team || getTeamAbbreviation(matchup.away_team) === player.team
                     );
                     
                     playerMatchups.forEach(matchup => {
-                        const opponent = getTeamAbbreviation(matchup.home_team) === player.team ? getTeamAbbreviation(matchup.away_team) : getTeamAbbreviation(matchup.home_team);
+                        // Determine opponent's abbreviation
+                        const opponentAbbr = getTeamAbbreviation(matchup.home_team) === player.team 
+                                            ? getTeamAbbreviation(matchup.away_team) 
+                                            : getTeamAbbreviation(matchup.home_team);
+                        
                         playerMatchupCombos.push({
-                            player: player,
-                            matchup: matchup, // Keep original matchup data for display if needed
-                            opponent: opponent // Opponent is now also an abbreviation
+                            player_name: player.player_name, // Store player name directly
+                            player_team_abbr: player.team, // Store player team abbreviation
+                            tprr_player: player.tprr_player, // Store tprr for sorting
+                            matchup_week: matchup.week, // Store matchup week
+                            matchup_home_team_full: matchup.home_team, // Store full name for display later
+                            matchup_away_team_full: matchup.away_team, // Store full name for display later
+                            opponent_abbr: opponentAbbr // Opponent is now also an abbreviation
                         });
                     });
                 });
@@ -1134,9 +1163,10 @@
 
                 // Limit to top combinations for processing speed (prioritize highest TPRR players)
                 const limitedCombos = playerMatchupCombos
-                    .sort((a, b) => b.player.tprr_player - a.player.tprr_player)
-                    .slice(0, 50);
-                    
+                    .sort((a, b) => b.tprr_player - a.tprr_player)
+                    .slice(0, 50); // Limit for efficiency
+
+                console.log(`Processing top ${limitedCombos.length} player-matchup combinations...`);
                 updateProgress(25, `Processing top ${limitedCombos.length} player-matchup combinations...`);
 
                 // STEP 5: Process each player-matchup combination
@@ -1144,27 +1174,35 @@
                 for (let i = 0; i < limitedCombos.length; i++) {
                     const combo = limitedCombos[i];
                     const progressPercent = 25 + ((i + 1) / limitedCombos.length) * 70; // 25% to 95%
-                    updateProgress(progressPercent, `Analyzing ${combo.player.player_name} vs ${combo.opponent} (Week ${combo.matchup.week})...`);
+                    updateProgress(progressPercent, `Analyzing ${combo.player_name} vs ${combo.opponent_abbr} (Week ${combo.matchup_week})...`);
 
                     try {
                         const result = await calculatePlayerProjection(
-                            combo.player.player_name,
-                            combo.opponent, // Opponent is already abbreviation
+                            combo.player_name,
+                            combo.opponent_abbr, // Opponent is already abbreviation for API calls
                             gameFlow,        
                             routesPerGame,   
                             5.5 // Default betting line
                         );
 
                         if (result) {
+                            // Enhance result with week and matchup info for display
+                            const homeTeamDisplay = getFullTeamName(combo.player_team_abbr) === combo.matchup_home_team_full
+                                                    ? combo.matchup_home_team_full
+                                                    : combo.matchup_away_team_full;
+                            const awayTeamDisplay = getFullTeamName(combo.player_team_abbr) === combo.matchup_home_team_full
+                                                    ? combo.matchup_away_team_full
+                                                    : combo.matchup_home_team_full;
+
                             bulkResults.push({
                                 ...result,
-                                week: combo.matchup.week,
-                                matchup: `${player.team} ${combo.matchup.home_team === combo.player.team ? 'vs' : '@'} ${combo.opponent}`
+                                week: combo.matchup_week,
+                                matchup: `${homeTeamDisplay} vs ${awayTeamDisplay}` // Formatted matchup string
                             });
                             processedCount++;
                         }
                     } catch (error) {
-                        console.warn(`Skipping projection for ${combo.player.player_name} vs ${combo.opponent} (Week ${combo.matchup.week}) due to error: ${error.message}`);
+                        console.warn(`Skipping projection for ${combo.player_name} vs ${combo.opponent_abbr} (Week ${combo.matchup_week}) due to error: ${error.message}`);
                     }
                 }
 
@@ -1174,8 +1212,8 @@
                 // Sort results by projected receptions (highest first)
                 bulkResults.sort((a, b) => parseFloat(b.expectedReceptions) - parseFloat(a.expectedReceptions));
 
-                // Limit to top 40 results for display
-                bulkResults = bulkResults.slice(0, 40);
+                // Limit to top 40 results for display (already done by slice earlier on combos if desired)
+                // bulkResults = bulkResults.slice(0, 40); // Re-slice here if you want to limit after processing all
 
                 updateProgress(100, 'Analysis complete!');
                 
@@ -1193,8 +1231,8 @@
             }
         }
 
-        async function calculatePlayerProjection(playerName, opponentTeam, gameFlow, routesPerGame, bettingLine) {
-            // opponentTeam is already an abbreviation here
+        async function calculatePlayerProjection(playerName, opponentTeamAbbr, gameFlow, routesPerGame, bettingLine) {
+            // opponentTeamAbbr is already an abbreviation here, passed from bulk or converted from single player input
             try {
                 // Get player's team and overall stats (using PLAYER_STATS_SEASON)
                 const { data: playerData, error: playerError } = await supabaseClient
@@ -1212,31 +1250,41 @@
 
                 if (!playerData || playerData.length === 0) {
                     console.warn(`Player "${playerName}" (Season ${PLAYER_STATS_SEASON}) not found or no overall stats. Using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, null, opponentTeam, 0.15, routesPerGame, gameFlow); 
-                    return { ...result, bettingLine: bettingLine, playerTeam: 'N/A' };
+                    // Ensure simple projection returns all required fields for consistency
+                    const result = calculateSimpleProjection(playerName, null, opponentTeamAbbr, 0.15, routesPerGame, gameFlow); 
+                    return { 
+                        ...result, 
+                        bettingLine: bettingLine, 
+                        playerTeam: 'N/A',
+                        opponentTeam: getFullTeamName(opponentTeamAbbr) // Return full name for display
+                    };
                 }
 
-                const playerTeam = playerData[0].team; // This will be the abbreviation
+                const playerTeamAbbr = playerData[0].team; // This will be the abbreviation
                 const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
 
                 // Get opponent's coverage frequencies (using PLAYER_STATS_SEASON for defensive data)
-                // opponentTeam is abbreviation, which should match defensive_coverages team_name
+                // defensive_coverages.team_name should store abbreviations
                 const { data: coverageData, error: coverageError } = await supabaseClient
                     .from('defensive_coverages')
                     .select('*')
-                    .eq('team_name', opponentTeam)
+                    .eq('team_name', opponentTeamAbbr) // Use abbreviation here
                     .eq('season', PLAYER_STATS_SEASON) // Defensive data from PLAYER_STATS_SEASON (2024)
                     .limit(1);
 
                 if (coverageError) {
-                    console.error(`Error fetching defensive_coverages for ${opponentTeam} (Season ${PLAYER_STATS_SEASON}):`, coverageError);
-                    throw new Error(`Defensive coverage data error for ${opponentTeam}: ${coverageError.message}`);
+                    console.error(`Error fetching defensive_coverages for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}):`, coverageError);
+                    throw new Error(`Defensive coverage data error for ${getFullTeamName(opponentTeamAbbr)}: ${coverageError.message}`);
                 }
 
                 if (!coverageData || coverageData.length === 0) {
-                    console.warn(`No defensive coverage data for ${opponentTeam} (Season ${PLAYER_STATS_SEASON}), using defaults for calculation.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return { ...result, bettingLine: bettingLine };
+                    console.warn(`No defensive coverage data for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}), using defaults for calculation.`);
+                    const result = calculateSimpleProjection(playerName, playerTeamAbbr, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
+                    return { 
+                        ...result, 
+                        bettingLine: bettingLine,
+                        opponentTeam: getFullTeamName(opponentTeamAbbr) // Return full name for display
+                    };
                 }
 
                 const coverage = coverageData[0];
@@ -1254,7 +1302,7 @@
                     .from('player_cover_stats')
                     .select('coverage_type, tprr_player, separation_score')
                     .eq('player_name', playerName)
-                    .eq('team', playerTeam) // playerTeam is abbreviation
+                    .eq('team', playerTeamAbbr) // playerTeam is abbreviation
                     .eq('season', PLAYER_STATS_SEASON) 
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
@@ -1265,8 +1313,12 @@
 
                 if (!playerStats || playerStats.length === 0) {
                     console.warn(`No detailed coverage stats found for ${playerName} (Season ${PLAYER_STATS_SEASON}), using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return { ...result, bettingLine: bettingLine };
+                    const result = calculateSimpleProjection(playerName, playerTeamAbbr, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
+                    return { 
+                        ...result, 
+                        bettingLine: bettingLine,
+                        opponentTeam: getFullTeamName(opponentTeamAbbr) // Return full name for display
+                    };
                 }
 
                 // Calculate weighted TPRR and separation scores
@@ -1280,7 +1332,7 @@
                         if (playerStat) {
                             const weight = coverage.pct / 100;
                             weightedTPRR += (playerStat.tprr_player * 100) * weight;
-                            weightedSeparation += (playerStat.separation_score || 0.2) * weight;
+                            weightedSeparation += (playerStat.separation_score || 0.2) * weight; // Use default if score is missing
                             totalWeight += weight;
                         }
                     }
@@ -1288,8 +1340,12 @@
 
                 if (totalWeight === 0) {
                     console.warn(`No valid coverage data for ${playerName} from fetched stats to calculate weighted scores. Using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return { ...result, bettingLine: bettingLine };
+                    const result = calculateSimpleProjection(playerName, playerTeamAbbr, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
+                    return { 
+                        ...result, 
+                        bettingLine: bettingLine,
+                        opponentTeam: getFullTeamName(opponentTeamAbbr) // Return full name for display
+                    };
                 }
 
                 const stats = {
@@ -1300,22 +1356,22 @@
                 const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
 
                 // Get defensive matchup stats (using PLAYER_STATS_SEASON)
-                // opponentTeam is abbreviation, which should match defensive_matchups defensive_team_name
+                // defensive_matchups.defensive_team_name should store abbreviations
                 const { data: defStats, error: defMatchupError } = await supabaseClient
                     .from('defensive_matchups')
                     .select('tprr_allowed, catch_rate_allowed')
-                    .eq('defensive_team_name', opponentTeam)
+                    .eq('defensive_team_name', opponentTeamAbbr) // Use abbreviation here
                     .eq('season', PLAYER_STATS_SEASON) 
                     .eq('coverage_type', mostFrequent.name)
                     .limit(1);
                 
                 if (defMatchupError) {
-                    console.error(`Error fetching defensive_matchups for ${opponentTeam} (Season ${PLAYER_STATS_SEASON}):`, defMatchupError);
+                    console.error(`Error fetching defensive_matchups for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}):`, defMatchupError);
                 }
 
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
                 if (!defStats || defStats.length === 0) {
-                    console.warn(`No specific defensive matchup stats for ${opponentTeam} in ${mostFrequent.name} coverage (Season ${PLAYER_STATS_SEASON}). Using default.`);
+                    console.warn(`No specific defensive matchup stats for ${opponentTeamAbbr} in ${mostFrequent.name} coverage (Season ${PLAYER_STATS_SEASON}). Using default.`);
                 }
 
                 const result = calculateReceptionScore(
@@ -1325,7 +1381,7 @@
                     routesPerGame,
                     gameFlow,
                     mostFrequent.pct,
-                    defMatchup.tprr_allowed * 100,
+                    defMatchup.tprr_allowed * 100, // Ensure percentage is correctly formatted
                     defMatchup.catch_rate_allowed
                 );
 
@@ -1334,8 +1390,8 @@
 
                 return {
                     playerName,
-                    playerTeam,
-                    opponentTeam,
+                    playerTeam: playerTeamAbbr, // Return abbreviation for internal logic
+                    opponentTeam: getFullTeamName(opponentTeamAbbr), // Return full name for display
                     targetShare,
                     tprr: stats.tprr_player.toFixed(1),
                     sepScore: stats.separation_score.toFixed(3),
@@ -1345,25 +1401,25 @@
                 };
 
             } catch (error) {
-                console.error(`Full projection calculation failed for ${playerName} vs ${opponentTeam}:`, error);
+                console.error(`Full projection calculation failed for ${playerName} vs ${opponentTeamAbbr}:`, error);
                 throw error; 
             }
         }
 
-        function calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow) {
+        function calculateSimpleProjection(playerName, playerTeam, opponentTeamAbbr, targetShare, routesPerGame, gameFlow) {
             const gameScriptMultiplier = 0.85 + (gameFlow * 0.075);
             const effectiveTPRR = parseFloat(targetShare) / 100; 
             const baseProjection = routesPerGame * effectiveTPRR * 0.65 * gameScriptMultiplier; 
             
             return {
                 playerName,
-                playerTeam: playerTeam || 'N/A', 
-                opponentTeam,
+                playerTeam: playerTeam || 'N/A', // Keep as abbreviation if available, or 'N/A'
+                opponentTeam: getFullTeamName(opponentTeamAbbr), // Convert to full name for consistency in return
                 targetShare: (effectiveTPRR * 100).toFixed(1),
                 tprr: (effectiveTPRR * 100).toFixed(1),
                 sepScore: "0.200", 
                 expectedReceptions: baseProjection.toFixed(1),
-                edgeScore: 0 
+                edgeScore: 0 // Default for simple projection
             };
         }
 
@@ -1379,49 +1435,52 @@
                 return;
             }
 
-            // You might want to enhance the 'matchup' display in bulk to show full team names
-            // For example, if result.playerTeam and result.opponentTeam are abbreviations here,
-            // you'd need a reverse mapping to display full names if desired.
-            // For now, it will display abbreviations.
-            resultsList.innerHTML = bulkResults.map((result, index) => `
-                <div class="bulk-result-item">
-                    <div class="result-header">
-                        <div>
-                            <div class="player-info">#${index + 1} ${result.playerName} (${result.playerTeam})</div>
-                            <div class="matchup-info">Week ${result.week} - ${result.matchup}</div>
+            // Correctly reference properties from the 'result' object for display
+            resultsList.innerHTML = bulkResults.map((result, index) => {
+                // Ensure playerTeam and opponentTeam are displayed as abbreviations if that's what's stored
+                const playerTeamDisplay = result.playerTeam || 'N/A';
+                const opponentTeamDisplay = result.opponentTeam; // This is already the full name from calculatePlayerProjection
+                
+                return `
+                    <div class="bulk-result-item">
+                        <div class="result-header">
+                            <div>
+                                <div class="player-info">#${index + 1} ${result.playerName} (${playerTeamDisplay})</div>
+                                <div class="matchup-info">Week ${result.week} - ${result.matchup}</div>
+                            </div>
+                            <div class="projection-score">
+                                ${result.expectedReceptions} rec
+                            </div>
                         </div>
-                        <div class="projection-score">
-                            ${result.expectedReceptions} rec
+                        <div class="result-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Projection</div>
+                                <div class="detail-value">${result.expectedReceptions}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Target Share</div>
+                                <div class="detail-value">${result.targetShare}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">TPRR</div>
+                                <div class="detail-value">${result.tprr}%</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Separation</div>
+                                <div class="detail-value">${result.sepScore}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Opponent</div>
+                                <div class="detail-value">${opponentTeamDisplay}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Week</div>
+                                <div class="detail-value">${result.week}</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="result-details">
-                        <div class="detail-item">
-                            <div class="detail-label">Projection</div>
-                            <div class="detail-value">${result.expectedReceptions}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Target Share</div>
-                            <div class="detail-value">${result.targetShare}%</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">TPRR</div>
-                            <div class="detail-value">${result.tprr}%</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Separation</div>
-                            <div class="detail-value">${result.sepScore}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Opponent</div>
-                            <div class="detail-value">${result.opponentTeam}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Week</div>
-                            <div class="detail-value">${result.week}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById('bulkResults').style.display = 'block';
         }
@@ -1450,10 +1509,10 @@
                 ...bulkResults.map((result, index) => [
                     index + 1,
                     result.playerName,
-                    result.playerTeam,
+                    result.playerTeam, // This will be the abbreviation now
                     result.week,
                     result.matchup,
-                    result.opponentTeam,
+                    result.opponentTeam, // This is the full name now
                     result.expectedReceptions,
                     result.targetShare + '%',
                     result.tprr + '%',
@@ -1473,44 +1532,38 @@
         function normalizeTeamName(input) {
             // This function is primarily used by the single player autocomplete and input.
             // It tries to convert various inputs to a standardized full name.
-            const teamMapping = {
-                'ARI': 'Arizona Cardinals', 'ATL': 'Atlanta Falcons', 'BAL': 'Baltimore Ravens',
-                'BUF': 'Buffalo Bills', 'CAR': 'Carolina Panthers', 'CHI': 'Chicago Bears',
-                'CIN': 'Cincinnati Bengals', 'CLE': 'Cleveland Browns', 'DAL': 'Dallas Cowboys',
-                'DEN': 'Denver Broncos', 'DET': 'Detroit Lions', 'GB': 'Green Bay Packers',
-                'HOU': 'Houston Texans', 'IND': 'Indianapolis Colts', 'JAX': 'Jacksonville Jaguars',
-                'KC': 'Kansas City Chiefs', 'LV': 'Las Vegas Raiders', 'LAC': 'Los Angeles Chargers',
-                'LAR': 'Los Angeles Rams', 'MIA': 'Miami Dolphins', 'MIN': 'Minnesota Vikings',
-                'NE': 'New England Patriots', 'NO': 'New Orleans Saints', 'NYG': 'New York Giants',
-                'NYJ': 'New York Jets', 'PHI': 'Philadelphia Eagles', 'PIT': 'Pittsburgh Steelers',
-                'SF': 'San Francisco 49ers', 'SEA': 'Seattle Seahawks', 'TB': 'Tampa Bay Buccaneers',
-                'TEN': 'Tennessee Titans', 'WAS': 'Washington Commanders'
-            };
+            // This map has full name as key, abbreviation as value
+            const reversedTeamMapping = {};
+            for (const fullName in teamAbbreviationMap) {
+                reversedTeamMapping[teamAbbreviationMap[fullName]] = fullName;
+            }
+
+            const lowerInput = input.trim().toLowerCase();
             
-            const upperInput = input.trim().toUpperCase();
-            // Check if input is an abbreviation
-            for (const fullName in teamMapping) {
-                if (teamMapping[fullName] === upperInput) { // Check if abbreviation matches
-                    return fullName; // Return the full name if input was an abbreviation
+            // 1. Check if input is a known full name
+            for (const fullName of Object.keys(teamAbbreviationMap)) {
+                if (fullName.toLowerCase() === lowerInput) {
+                    return fullName; // Return the exact full name from the map
                 }
             }
-            if (teamMapping[upperInput]) { // This case handles if someone types "ARI" directly
-                return teamMapping[upperInput];
-            }
-            
-            for (const fullName of Object.values(teamMapping)) { // Check if input is a full name
-                if (input.trim().toLowerCase() === fullName.toLowerCase()) {
-                    return fullName;
+            // 2. Check if input is a known abbreviation (and return its full name)
+            for (const abbr in reversedTeamMapping) {
+                if (abbr.toLowerCase() === lowerInput) {
+                    return reversedTeamMapping[abbr];
                 }
             }
             
-            return input.trim(); // Return original if no match
+            return input.trim(); // Return original if no match (could be partial or invalid)
         }
+
 
         async function calculateProjection() {
             const playerName = document.getElementById('playerName').value.trim();
-            const opponentTeamFull = normalizeTeamName(document.getElementById('opponentTeam').value); // Get full name
-            const opponentTeamAbbr = getTeamAbbreviation(opponentTeamFull); // Convert to abbr for API calls
+            // opponentTeamFull will be the standardized full name (e.g., "Jacksonville Jaguars")
+            const opponentTeamFull = normalizeTeamName(document.getElementById('opponentTeam').value); 
+            // opponentTeamAbbr will be the abbreviation (e.g., "JAX")
+            const opponentTeamAbbr = getTeamAbbreviation(opponentTeamFull); 
+            
             const gameFlow = parseInt(document.getElementById('gameFlow').value);
             const routesPerGame = parseInt(document.getElementById('routesPerGame').value);
             const bettingLine = parseFloat(document.getElementById('bettingLine').value);
@@ -1531,221 +1584,36 @@
             hideResults();
 
             try {
-                // 1. Get player's team and overall stats (using PLAYER_STATS_SEASON)
-                const { data: playerData, error: playerError } = await supabaseClient
-                    .from('player_cover_stats')
-                    .select('team, tprr_player')
-                    .eq('player_name', playerName)
-                    .eq('season', PLAYER_STATS_SEASON) 
-                    .eq('coverage_type', 'Overall')
-                    .limit(1);
-
-                if (playerError) {
-                    console.error(`Error fetching player_cover_stats for ${playerName} (Season ${PLAYER_STATS_SEASON}):`, playerError);
-                    throw new Error(`Player "${playerName}" data error: ${playerError.message}`);
-                }
-
-                if (!playerData || playerData.length === 0) {
-                    console.warn(`Player "${playerName}" (Season ${PLAYER_STATS_SEASON}) not found or no overall stats. Using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, null, opponentTeamAbbr, 0.15, routesPerGame, gameFlow); 
-                    displayResults({
-                        playerName,
-                        playerTeam: 'N/A',
-                        opponentTeam: opponentTeamFull, // Display full name
-                        coverageType: "Simple Projection (Player data missing)", 
-                        coverageFreq: 100,
-                        coverageBreakdown: [],
-                        targetShare: result.targetShare,
-                        tprr: result.tprr,
-                        sepScore: result.sepScore,
-                        expectedReceptions: result.expectedReceptions,
-                        receptionScore: result.edgeScore,
-                        bettingLine: bettingLine
-                    });
-                    return; 
-                }
-
-                const playerTeam = playerData[0].team; // This will be the abbreviation
-                const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
-
-                // 2. Get opponent's coverage frequencies (using PLAYER_STATS_SEASON)
-                // Use the abbreviation for the database query
-                const { data: coverageData, error: coverageError } = await supabaseClient
-                    .from('defensive_coverages')
-                    .select('*')
-                    .eq('team_name', opponentTeamAbbr) // Use abbreviation here
-                    .eq('season', PLAYER_STATS_SEASON) 
-                    .limit(1);
-
-                if (coverageError) {
-                    console.error(`Error fetching defensive_coverages for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}):`, coverageError);
-                    throw new Error(`Defensive coverage data error for ${opponentTeamFull}: ${coverageError.message}`);
-                }
-
-                if (!coverageData || coverageData.length === 0) {
-                    console.warn(`No defensive coverage data for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}), using defaults for calculation.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
-                    displayResults({
-                        playerName,
-                        playerTeam,
-                        opponentTeam: opponentTeamFull, // Display full name
-                        coverageType: "Simple Projection (Defensive coverage missing)", 
-                        coverageFreq: 100,
-                        coverageBreakdown: [],
-                        targetShare: result.targetShare,
-                        tprr: result.tprr,
-                        sepScore: result.sepScore,
-                        expectedReceptions: result.expectedReceptions,
-                        receptionScore: result.edgeScore,
-                        bettingLine: bettingLine
-                    });
-                    return; 
-                }
-
-                const coverage = coverageData[0];
-                
-                const coverageTypes = [
-                    { name: 'Man Coverage', pct: coverage.man_pct },
-                    { name: 'Cover 2', pct: coverage.cover_2_pct },
-                    { name: 'Cover 3', pct: coverage.cover_3_pct },
-                    { name: 'Cover 4', pct: coverage.cover_4_pct },
-                    { name: 'Cover 6', pct: coverage.cover_6_pct }
-                ];
-
-                // 3. Get player stats for ALL coverage types (using PLAYER_STATS_SEASON)
-                const { data: playerStats, error: statsError } = await supabaseClient
-                    .from('player_cover_stats')
-                    .select('coverage_type, tprr_player, separation_score')
-                    .eq('player_name', playerName)
-                    .eq('team', playerTeam) // playerTeam is abbreviation
-                    .eq('season', PLAYER_STATS_SEASON) 
-                    .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
-
-                if (statsError) {
-                    console.error(`Error fetching detailed player_cover_stats for ${playerName} (Season ${PLAYER_STATS_SEASON}):`, statsError);
-                    throw new Error(`Player coverage stats error for ${playerName}: ${statsError.message}`);
-                }
-
-                if (!playerStats || playerStats.length === 0) {
-                    console.warn(`No detailed coverage stats found for ${playerName} (Season ${PLAYER_STATS_SEASON}), using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
-                    displayResults({
-                        playerName,
-                        playerTeam,
-                        opponentTeam: opponentTeamFull, // Display full name
-                        coverageType: "Simple Projection (Player coverage stats missing)",
-                        coverageFreq: 100,
-                        coverageBreakdown: [],
-                        targetShare: result.targetShare,
-                        tprr: result.tprr,
-                        sepScore: result.sepScore,
-                        expectedReceptions: result.expectedReceptions,
-                        receptionScore: result.edgeScore,
-                        bettingLine: bettingLine
-                    });
-                    return; 
-                }
-
-                // Calculate weighted TPRR and separation scores
-                let weightedTPRR = 0;
-                let weightedSeparation = 0;
-                let totalWeight = 0;
-                let coverageBreakdown = [];
-
-                coverageTypes.forEach(coverage => {
-                    if (coverage.pct > 0) {
-                        const playerStat = playerStats.find(s => s.coverage_type === coverage.name);
-                        if (playerStat) {
-                            const weight = coverage.pct / 100;
-                            weightedTPRR += (playerStat.tprr_player * 100) * weight;
-                            weightedSeparation += (playerStat.separation_score || 0.2) * weight;
-                            totalWeight += weight;
-                            
-                            coverageBreakdown.push({
-                                name: coverage.name,
-                                frequency: coverage.pct,
-                                playerTPRR: (playerStat.tprr_player * 100).toFixed(1)
-                            });
-                        }
-                    }
-                });
-
-                if (totalWeight === 0) {
-                    console.warn(`No valid coverage data for ${playerName} from fetched stats to calculate weighted scores. Using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeamAbbr, targetShare, routesPerGame, gameFlow);
-                    displayResults({
-                        playerName,
-                        playerTeam,
-                        opponentTeam: opponentTeamFull, // Display full name
-                        coverageType: "Simple Projection (Weighted calc failed)",
-                        coverageFreq: 100,
-                        coverageBreakdown: [],
-                        targetShare: result.targetShare,
-                        tprr: result.tprr,
-                        sepScore: result.sepScore,
-                        expectedReceptions: result.expectedReceptions,
-                        receptionScore: result.edgeScore,
-                        bettingLine: bettingLine
-                    });
-                    return; 
-                }
-
-                const stats = {
-                    tprr_player: weightedTPRR / totalWeight,
-                    separation_score: weightedSeparation / totalWeight
-                };
-
-                const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
-
-                // 4. Get defensive matchup stats (using PLAYER_STATS_SEASON)
-                // Use the abbreviation for the database query
-                const { data: defStats, error: defMatchupError } = await supabaseClient
-                    .from('defensive_matchups')
-                    .select('tprr_allowed, catch_rate_allowed')
-                    .eq('defensive_team_name', opponentTeamAbbr) // Use abbreviation here
-                    .eq('season', PLAYER_STATS_SEASON) 
-                    .eq('coverage_type', mostFrequent.name)
-                    .limit(1);
-                
-                if (defMatchupError) {
-                    console.error(`Error fetching defensive_matchups for ${opponentTeamAbbr} (Season ${PLAYER_STATS_SEASON}):`, defMatchupError);
-                }
-
-                const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
-                if (!defStats || defStats.length === 0) {
-                    console.warn(`No specific defensive matchup stats for ${opponentTeamAbbr} in ${mostFrequent.name} coverage (Season ${PLAYER_STATS_SEASON}). Using default.`);
-                }
-
-                // 5. Calculate score using weighted stats
-                const result = calculateReceptionScore(
-                    stats.tprr_player,
-                    stats.separation_score,
-                    parseFloat(targetShare),
-                    routesPerGame,
-                    gameFlow,
-                    mostFrequent.pct,
-                    defMatchup.tprr_allowed * 100,
-                    defMatchup.catch_rate_allowed
+                // The `calculatePlayerProjection` function already handles fetching and returning
+                // the data in a consistent format (playerTeam as abbr, opponentTeam as full name).
+                const result = await calculatePlayerProjection(
+                    playerName, 
+                    opponentTeamAbbr, // Pass abbreviation for internal calculation
+                    gameFlow, 
+                    routesPerGame, 
+                    bettingLine
                 );
 
+                // Now display the result directly from what `calculatePlayerProjection` returned
                 const projection = parseFloat(result.expectedReceptions);
-                const edgeDifference = projection - bettingLine; // Calculate difference for display
-                const edgeScore = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
+                const line = result.bettingLine;
+                const edgeDifference = projection - line;
+                const edgeScoreDisplay = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
 
                 displayResults({
-                    playerName,
-                    playerTeam,
-                    opponentTeam: opponentTeamFull, // Display full name
-                    coverageType: "Weighted Analysis",
-                    coverageFreq: 100,
-                    coverageBreakdown,
-                    targetShare,
-                    tprr: stats.tprr_player.toFixed(1),
-                    sepScore: stats.separation_score.toFixed(3),
+                    playerName: result.playerName,
+                    playerTeam: result.playerTeam, // Abbreviation
+                    opponentTeam: result.opponentTeam, // Full name
+                    coverageType: "Weighted Analysis", // Or "Simple Projection" if that path was taken
+                    coverageFreq: 100, // This might need to be more dynamic if you want precise freq breakdown for single player
+                    coverageBreakdown: [], // You can populate this if needed for single player display
+                    targetShare: result.targetShare,
+                    tprr: result.tprr,
+                    sepScore: result.sepScore,
                     expectedReceptions: result.expectedReceptions,
-                    receptionScore: result.finalScore, // This is the overall model score
+                    receptionScore: result.finalScore, // This is the overall model score if calculateReceptionScore returns it
                     bettingLine: bettingLine,
-                    edgeScore: edgeScore // Pass edgeScore explicitly for display
+                    edgeScore: edgeScoreDisplay // Pass edgeScore explicitly for display
                 });
 
             } catch (error) {
@@ -1800,7 +1668,7 @@
             const expectedReceptions = (baseReceptions * confidenceFactor).toFixed(1);
             
             return {
-                finalScore: finalScore.toFixed(1),
+                finalScore: finalScore.toFixed(1), // Changed to return finalScore
                 expectedReceptions
             };
         }
@@ -1814,22 +1682,25 @@
                 });
                 coverageInfoHtml += `</ul>`;
             } else {
-                coverageInfoHtml += `<p>${data.coverageType} used due to missing detailed data for player or defense.</p>`;
+                // Ensure this message is dynamic based on why simple projection was used
+                coverageInfoHtml += `<p>${data.coverageType} used due to missing data for player or defense. Results may be less accurate.</p>`;
             }
             document.getElementById('coverageInfo').innerHTML = coverageInfoHtml;
             
             const projection = parseFloat(data.expectedReceptions);
             const line = data.bettingLine;
             const edgeDifference = projection - line;
-            const edgeScore = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
+            const edgeScoreDisplay = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
             
-            document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`;
-            document.getElementById('defenseDisplay').textContent = data.opponentTeam; // Displays full name
+            document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`; // Shows abbr
+            document.getElementById('defenseDisplay').textContent = data.opponentTeam; // Shows full name
             document.getElementById('targetShare').textContent = `${data.targetShare}%`;
             document.getElementById('tprrDisplay').textContent = `${data.tprr}%`;
             document.getElementById('sepScoreDisplay').textContent = data.sepScore;
             document.getElementById('expectedReceptions').textContent = data.expectedReceptions;
-            document.getElementById('finalScore').textContent = edgeScore; // Displaying calculated edge score
+            document.getElementById('finalScore').textContent = edgeScoreDisplay; // Displaying calculated edge score
+            // If you want to show the underlying model score too, you can add another line
+            // document.getElementById('modelScore').textContent = data.receptionScore; 
 
             let interpretation = '';
             let interpretClass = '';
@@ -1997,7 +1868,7 @@
                 
                 const filtered = teams.filter(team => 
                     team.toLowerCase().includes(value) || 
-                    teamAbbreviationMap[team] && teamAbbreviationMap[team].toLowerCase().includes(value) // Check for abbr match
+                    (teamAbbreviationMap[team] && teamAbbreviationMap[team].toLowerCase().includes(value)) // Check for abbr match
                 ).slice(0, 8);
                 
                 if (filtered.length > 0) {
