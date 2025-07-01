@@ -1,4 +1,4 @@
-NOTICE TO USER: This is a legal agreement between you (the "Licensee") and [Copyright Holder] (the "Licensor"). By downloading, installing, or otherwise using the software and any associated files (the "Software"), you agree to be bound by the terms of this Agreement. If you do not agree to these terms, do not use the Software.
+NOTICE TO USER: This is a legal agreement between you (the "Licensee") and Clear Edge Sports LLC (the "Licensor"). By downloading, installing, or otherwise using the software and any associated files (the "Software"), you agree to be bound by the terms of this Agreement. If you do not agree to these terms, do not use the Software.
 
 1. Grant of License
 
