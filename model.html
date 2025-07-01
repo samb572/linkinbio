@@ -561,7 +561,6 @@
             max-height: 200px;
             overflow-y: auto;
             z-index: 1000;
-            display: none;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
         }
 
@@ -880,43 +879,53 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
     <script>
-        // Initialize Supabase client immediately when the script loads
-        // Make sure these are truly const and not re-assigned later
+        // Define Supabase constants globally, BEFORE any other logic
         const SUPABASE_URL = 'https://pyjtwdgapmbdgtpflzan.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
-        const SEASON = 2024;
-        const BULK_SEASON = 2025; // For bulk analysis using weekly_matchups
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImexcCf6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
+        const SEASON = 2024; // Player stats (player_cover_stats, defensive_coverages, defensive_matchups)
+        const BULK_SEASON = 2025; // Weekly matchups (weekly_matchups)
 
-        let supabaseClient = null; // Declared here, initialized in window.load
+        let supabaseClient = null; 
 
+        // **IMMEDIATE INITIALIZATION**
+        try {
+            if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('Supabase client initialized successfully at script load.');
+            } else {
+                console.error('Supabase library not found or createClient is missing. Check script tag and network.');
+                document.addEventListener('DOMContentLoaded', () => {
+                    const mainContent = document.getElementById('mainContent');
+                    if (mainContent) mainContent.style.display = 'block'; 
+                    showError('FATAL: Supabase library failed to load. Check console for details.');
+                });
+            }
+        } catch (error) {
+            console.error('Error during Supabase client creation:', error);
+            document.addEventListener('DOMContentLoaded', () => {
+                const mainContent = document.getElementById('mainContent');
+                if (mainContent) mainContent.style.display = 'block'; 
+                showError('FATAL: Supabase client creation error: ' + error.message + '. Ensure URL/Key are correct.');
+            });
+        }
+
+        // Other global variables
         let playerList = [];
         let selectedIndex = -1;
         let bulkResults = [];
 
         window.addEventListener('load', function() {
-            try {
-                // Check if window.supabase exists and create client
-                if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    console.log('Supabase client initialized successfully via window.supabase');
-                } else {
-                    console.error('Supabase library not loaded or createClient is not available. Check the script tag and network.');
-                    showError('Failed to load Supabase. Please check your browser console for details.');
-                    return; // Stop further execution if Supabase client cannot be initialized
-                }
-            } catch (error) {
-                console.error('Error during Supabase client creation:', error);
-                showError('Error initializing Supabase client: ' + error.message + '. Ensure URL/Key are correct.');
-                return; // Stop further execution if initialization fails
-            }
-            
             setupPasswordHandling();
             setupModeToggle();
-            setupAutocomplete(); // This will call loadPlayerNames, which needs supabaseClient
+            setupAutocomplete(); 
             setupBulkTeams();
             document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
             document.getElementById('bulkCalculateBtn').addEventListener('click', runBulkAnalysis);
             document.getElementById('exportBtn').addEventListener('click', exportResults);
+
+            if (!supabaseClient) {
+                 showError('Supabase client is not available. API calls will likely fail.');
+            }
         });
 
         function setupPasswordHandling() {
@@ -965,7 +974,7 @@
                 bulkSection.style.display = 'none';
                 results.style.display = 'none';
                 bulkResults.style.display = 'none';
-                hideError(); // Clear any previous errors
+                hideError(); 
             });
 
             bulkModeBtn.addEventListener('click', () => {
@@ -975,7 +984,7 @@
                 bulkSection.style.display = 'block';
                 results.style.display = 'none';
                 bulkResults.style.display = 'none';
-                hideError(); // Clear any previous errors
+                hideError(); 
             });
         }
 
@@ -1010,20 +1019,19 @@
             hideError();
             bulkResults = [];
 
-            // CRITICAL CHECK: Ensure supabaseClient is ready
             if (!supabaseClient) {
                 showError('Supabase client not initialized. Cannot perform bulk analysis. Please refresh the page.');
                 showBulkLoading(false);
-                return; // Stop execution if client isn't ready
+                return; 
             }
 
             try {
                 console.log('Starting bulk analysis...');
                 
-                // Robust test call to ensure the client is functional and the key is accepted
+                // Test call to ensure the client is functional and the key is accepted
                 const { error: testError } = await supabaseClient
-                    .from('player_cover_stats') // Use a table you know exists
-                    .select('player_name')     // Select a valid column from that table
+                    .from('player_cover_stats') 
+                    .select('player_name')     
                     .limit(1);
 
                 if (testError) {
@@ -1031,13 +1039,13 @@
                     throw new Error(`Supabase connection failed: ${testError.message}. Double-check your API key and table permissions.`);
                 }
                 console.log('Supabase client is making requests successfully (initial test passed).');
-                updateProgress(5, `Connection verified. Fetching matchups...`);
+                updateProgress(5, `Connection verified. Fetching matchups for ${BULK_SEASON}...`);
 
-                // Get matchups based on filters
+                // Get matchups based on filters (using BULK_SEASON for weekly_matchups)
                 let matchupsQuery = supabaseClient
                     .from('weekly_matchups')
                     .select('*')
-                    .eq('season', BULK_SEASON);
+                    .eq('season', BULK_SEASON); 
 
                 if (week) {
                     matchupsQuery = matchupsQuery.eq('week', parseInt(week));
@@ -1047,61 +1055,60 @@
                 const { data: matchups, error: matchupError } = await matchupsQuery;
 
                 if (matchupError) {
-                    console.error('Matchups error:', matchupError);
-                    throw new Error('Error fetching matchups: ' + matchupError.message);
+                    console.error(`Error fetching weekly_matchups for ${BULK_SEASON}:`, matchupError);
+                    throw new Error(`Error fetching weekly matchups: ${matchupError.message}. Make sure the table exists and has data for ${BULK_SEASON}.`);
                 }
 
                 if (!matchups || matchups.length === 0) {
-                    console.warn('No matchups found for the selected criteria.');
-                    showError('No matchups found for the selected criteria. Please adjust filters.');
+                    console.warn(`No matchups found for the selected criteria (Season ${BULK_SEASON}, Week ${week || 'All'}).`);
+                    showError(`No matchups found for the selected criteria (Season ${BULK_SEASON}, Week ${week || 'All'}). Please adjust filters.`);
                     showBulkLoading(false);
                     return;
                 }
 
-                console.log(`Found ${matchups.length} matchups`);
+                console.log(`Found ${matchups.length} matchups for Season ${BULK_SEASON}.`);
 
-                // Get all players for the selected team or all teams
+                // Get players (using SEASON for player_cover_stats)
                 let playerQuery = supabaseClient
                     .from('player_cover_stats')
                     .select('player_name, team, tprr_player')
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) // Player stats from SEASON (2024)
                     .eq('coverage_type', 'Overall')
-                    .order('tprr_player', { ascending: false }); // Order by target rate
+                    .order('tprr_player', { ascending: false }); 
 
                 if (team) {
                     playerQuery = playerQuery.eq('team', team);
                 }
 
-                console.log('Fetching players...');
+                console.log(`Fetching players for Season ${SEASON}...`);
                 const { data: players, error: playerError } = await playerQuery;
 
                 if (playerError) {
-                    console.error('Players error:', playerError);
-                    throw new Error('Error fetching players: ' + playerError.message);
+                    console.error(`Error fetching player_cover_stats for ${SEASON}:`, playerError);
+                    throw new Error(`Error fetching player data: ${playerError.message}. Make sure the table exists and has data for ${SEASON}.`);
                 }
 
                 if (!players || players.length === 0) {
-                    console.warn('No players found for the selected criteria.');
-                    showError('No players found for the selected criteria. Please adjust filters or ensure player data exists.');
+                    console.warn(`No players found for the selected criteria (Season ${SEASON}).`);
+                    showError(`No players found for the selected criteria (Season ${SEASON}). Please adjust filters or ensure player data exists.`);
                     showBulkLoading(false);
                     return;
                 }
 
-                console.log(`Found ${players.length} players`);
+                console.log(`Found ${players.length} players for Season ${SEASON}.`);
 
-                // Get unique players and limit to top 50 by target rate
+                // Get unique players and limit to top 50 by target rate for processing
                 const uniquePlayers = Array.from(new Map(players.map(p => [p.player_name, p])).values())
-                                        .slice(0, 50); // Limit to top 50 players by target rate
+                                        .slice(0, 50); 
                 
-                updateProgress(0, `Starting analysis of top ${uniquePlayers.length} players...`);
+                updateProgress(0, `Analyzing ${uniquePlayers.length} relevant players...`);
 
                 // Process each player against their matchups
+                // Note: We're projecting 2024 players into 2025 matchups using 2024 player/defensive data.
                 for (let i = 0; i < uniquePlayers.length; i++) {
                     const player = uniquePlayers[i];
-                    // Update progress more consistently
                     updateProgress(((i + 1) / uniquePlayers.length) * 100, `Analyzing ${player.player_name}...`);
 
-                    // Find matchups for this player's team
                     const playerMatchups = matchups.filter(m => 
                         m.home_team === player.team || m.away_team === player.team
                     );
@@ -1114,8 +1121,8 @@
                                 player.player_name,
                                 opponent,
                                 gameFlow,
-                                35, // Default routes per game
-                                5.5 // Default betting line for comparison
+                                35, 
+                                5.5 // Default betting line, as it's not filtered in bulk
                             );
 
                             if (result) {
@@ -1127,7 +1134,7 @@
                             }
                         } catch (error) {
                             // Log the error but don't stop the entire bulk analysis for one player
-                            console.warn(`Skipping projection for ${player.player_name} vs ${opponent} due to error: ${error.message}`);
+                            console.warn(`Skipping projection for ${player.player_name} vs ${opponent} (Week ${matchup.week}) due to error: ${error.message}`);
                         }
                     }
                 }
@@ -1135,13 +1142,13 @@
                 // Sort results by projected receptions (highest first)
                 bulkResults.sort((a, b) => parseFloat(b.expectedReceptions) - parseFloat(a.expectedReceptions));
 
-                // Limit to top 50 results (already limited uniquePlayers to 50, but this re-limits final results if many matchups per player)
-                bulkResults = bulkResults.slice(0, 50);
+                // Limit to top 40 results for display
+                bulkResults = bulkResults.slice(0, 40); // <-- Changed to top 40
 
                 displayBulkResults();
 
             } catch (error) {
-                console.error('Bulk analysis failed:', error);
+                console.error('Bulk analysis failed overall:', error);
                 showError(error.message);
             } finally {
                 showBulkLoading(false);
@@ -1149,59 +1156,47 @@
         }
 
         async function calculatePlayerProjection(playerName, opponentTeam, gameFlow, routesPerGame, bettingLine) {
-            // This function is called internally by runBulkAnalysis and calculateProjection,
-            // so the supabaseClient check is handled by the calling function.
-            // However, for direct calls, it would need its own check.
-
             try {
-                // Get player's team and overall stats
+                // Get player's team and overall stats (using SEASON)
                 const { data: playerData, error: playerError } = await supabaseClient
                     .from('player_cover_stats')
                     .select('team, tprr_player')
                     .eq('player_name', playerName)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .eq('coverage_type', 'Overall')
                     .limit(1);
 
                 if (playerError) {
+                    console.error(`Error fetching player_cover_stats for ${playerName} (Season ${SEASON}):`, playerError);
                     throw new Error(`Player data error for ${playerName}: ${playerError.message}`);
                 }
 
                 if (!playerData || playerData.length === 0) {
-                    throw new Error(`Player "${playerName}" not found or no overall stats.`);
+                    console.warn(`Player "${playerName}" (Season ${SEASON}) not found or no overall stats. Using simple projection.`);
+                    const result = calculateSimpleProjection(playerName, null, opponentTeam, 0.15, routesPerGame, gameFlow); // Default target share if player not found
+                    return { ...result, bettingLine: bettingLine, playerTeam: 'N/A' };
                 }
 
                 const playerTeam = playerData[0].team;
                 const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
 
-                // Get opponent's coverage frequencies
+                // Get opponent's coverage frequencies (using SEASON for defensive data)
                 const { data: coverageData, error: coverageError } = await supabaseClient
                     .from('defensive_coverages')
                     .select('*')
                     .eq('team_name', opponentTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) // Defensive data from SEASON (2024)
                     .limit(1);
 
                 if (coverageError) {
-                    throw new Error(`Coverage data error for ${opponentTeam}: ${coverageError.message}`);
+                    console.error(`Error fetching defensive_coverages for ${opponentTeam} (Season ${SEASON}):`, coverageError);
+                    throw new Error(`Defensive coverage data error for ${opponentTeam}: ${coverageError.message}`);
                 }
 
                 if (!coverageData || coverageData.length === 0) {
-                    // Use default coverage if not found
-                    console.warn(`No defensive coverage data for ${opponentTeam}, using defaults for calculation.`);
-                    const defaultCoverage = {
-                        man_pct: 25,
-                        cover_2_pct: 15,
-                        cover_3_pct: 35,
-                        cover_4_pct: 15,
-                        cover_6_pct: 10
-                    };
-                    
+                    console.warn(`No defensive coverage data for ${opponentTeam} (Season ${SEASON}), using defaults for calculation.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return {
-                        ...result,
-                        bettingLine: bettingLine
-                    };
+                    return { ...result, bettingLine: bettingLine };
                 }
 
                 const coverage = coverageData[0];
@@ -1214,27 +1209,24 @@
                     { name: 'Cover 6', pct: coverage.cover_6_pct }
                 ];
 
-                // Get player stats for ALL coverage types
+                // Get player stats for ALL coverage types (using SEASON)
                 const { data: playerStats, error: statsError } = await supabaseClient
                     .from('player_cover_stats')
                     .select('coverage_type, tprr_player, separation_score')
                     .eq('player_name', playerName)
                     .eq('team', playerTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) // Player coverage stats from SEASON (2024)
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
                 if (statsError) {
+                    console.error(`Error fetching detailed player_cover_stats for ${playerName} (Season ${SEASON}):`, statsError);
                     throw new Error(`Player coverage stats error for ${playerName}: ${statsError.message}`);
                 }
 
                 if (!playerStats || playerStats.length === 0) {
-                    // Use simple projection if no detailed stats
-                    console.warn(`No detailed coverage stats for ${playerName}, using simple projection.`);
+                    console.warn(`No detailed coverage stats found for ${playerName} (Season ${SEASON}), using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return {
-                        ...result,
-                        bettingLine: bettingLine
-                    };
+                    return { ...result, bettingLine: bettingLine };
                 }
 
                 // Calculate weighted TPRR and separation scores
@@ -1255,12 +1247,9 @@
                 });
 
                 if (totalWeight === 0) {
-                    console.warn(`No valid coverage data for ${playerName} to calculate weighted scores. Using simple projection.`);
+                    console.warn(`No valid coverage data for ${playerName} from fetched stats. Using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
-                    return {
-                        ...result,
-                        bettingLine: bettingLine
-                    };
+                    return { ...result, bettingLine: bettingLine };
                 }
 
                 const stats = {
@@ -1270,16 +1259,24 @@
 
                 const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
 
-                // Get defensive matchup stats (optional)
-                const { data: defStats } = await supabaseClient
+                // Get defensive matchup stats (using SEASON)
+                const { data: defStats, error: defMatchupError } = await supabaseClient
                     .from('defensive_matchups')
                     .select('tprr_allowed, catch_rate_allowed')
                     .eq('defensive_team_name', opponentTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) // Defensive matchup stats from SEASON (2024)
                     .eq('coverage_type', mostFrequent.name)
                     .limit(1);
+                
+                if (defMatchupError) {
+                    console.error(`Error fetching defensive_matchups for ${opponentTeam} (Season ${SEASON}):`, defMatchupError);
+                    // Continue with default, don't throw an error to allow projection
+                }
 
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
+                if (!defStats || defStats.length === 0) {
+                    console.warn(`No specific defensive matchup stats for ${opponentTeam} in ${mostFrequent.name} coverage (Season ${SEASON}). Using default.`);
+                }
 
                 const result = calculateReceptionScore(
                     stats.tprr_player,
@@ -1303,32 +1300,30 @@
                     tprr: stats.tprr_player.toFixed(1),
                     sepScore: stats.separation_score.toFixed(3),
                     expectedReceptions: result.expectedReceptions,
-                    bettingLine: bettingLine,
-                    edgeScore: edgeScore
+                    bettingLine: bettingLine, // Passed for completeness, though not used in bulk display
+                    edgeScore: edgeScore // Calculated for completeness
                 };
 
             } catch (error) {
-                console.error(`Error in calculatePlayerProjection for ${playerName} vs ${opponentTeam}:`, error);
-                throw error; // Re-throw to be caught by the calling function (runBulkAnalysis or calculateProjection)
+                console.error(`Full projection calculation failed for ${playerName} vs ${opponentTeam}:`, error);
+                throw error; 
             }
         }
 
         function calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow) {
-            // Simple projection when detailed data is not available
             const gameScriptMultiplier = 0.85 + (gameFlow * 0.075);
-            // Fallback TPRR if not available, or use the targetShare itself
             const effectiveTPRR = parseFloat(targetShare) / 100; 
-            const baseProjection = routesPerGame * effectiveTPRR * 0.65 * gameScriptMultiplier; // 65% catch rate assumption
+            const baseProjection = routesPerGame * effectiveTPRR * 0.65 * gameScriptMultiplier; 
             
             return {
                 playerName,
-                playerTeam,
+                playerTeam: playerTeam || 'N/A', // Ensure team is set even if player data not found
                 opponentTeam,
-                targetShare,
-                tprr: (effectiveTPRR * 100).toFixed(1), // Display as percentage
-                sepScore: "0.200", // Default separation
+                targetShare: (effectiveTPRR * 100).toFixed(1),
+                tprr: (effectiveTPRR * 100).toFixed(1),
+                sepScore: "0.200", 
                 expectedReceptions: baseProjection.toFixed(1),
-                edgeScore: 0
+                edgeScore: 0 // Default edge score for simple projection
             };
         }
 
@@ -1336,10 +1331,10 @@
             const resultsCount = document.getElementById('resultsCount');
             const resultsList = document.getElementById('bulkResultsList');
             
-            resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`;
+            resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`; // Reflects the slice to 40
             
             if (bulkResults.length === 0) {
-                resultsList.innerHTML = '<div class="loading">No players found matching criteria or no projections generated.</div>';
+                resultsList.innerHTML = '<div class="loading">No players found matching criteria or no projections generated for this week.</div>';
                 document.getElementById('bulkResults').style.display = 'block';
                 return;
             }
@@ -1373,7 +1368,7 @@
                             <div class="detail-value">${result.sepScore}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">vs</div>
+                            <div class="detail-label">Opponent</div>
                             <div class="detail-value">${result.opponentTeam}</div>
                         </div>
                         <div class="detail-item">
@@ -1467,16 +1462,15 @@
             const routesPerGame = parseInt(document.getElementById('routesPerGame').value);
             const bettingLine = parseFloat(document.getElementById('bettingLine').value);
 
-            if (!playerName || !opponentTeam || !routesPerGame || !bettingLine) {
-                showError('Please fill in all fields');
+            if (!playerName || !opponentTeam || isNaN(routesPerGame) || isNaN(bettingLine)) { // Added NaN checks
+                showError('Please fill in all fields with valid numbers where required.');
                 return;
             }
             
-            // CRITICAL CHECK: Ensure supabaseClient is ready
             if (!supabaseClient) {
                 showError('Supabase client not initialized. Cannot calculate projection. Please refresh the page.');
                 showLoading(false);
-                return; // Stop execution if client isn't ready
+                return; 
             }
 
             showLoading(true);
@@ -1484,54 +1478,78 @@
             hideResults();
 
             try {
-                // 1. Get player's team and overall stats
+                // 1. Get player's team and overall stats (using SEASON)
                 const { data: playerData, error: playerError } = await supabaseClient
                     .from('player_cover_stats')
                     .select('team, tprr_player')
                     .eq('player_name', playerName)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .eq('coverage_type', 'Overall')
                     .limit(1);
 
-                if (playerError || !playerData || playerData.length === 0) {
-                    throw new Error(`Player "${playerName}" not found in database or no overall stats for them.`);
+                if (playerError) {
+                    console.error(`Error fetching player_cover_stats for ${playerName} (Season ${SEASON}):`, playerError);
+                    throw new Error(`Player "${playerName}" data error: ${playerError.message}`);
+                }
+
+                if (!playerData || playerData.length === 0) {
+                    console.warn(`Player "${playerName}" (Season ${SEASON}) not found or no overall stats. Using simple projection.`);
+                    const result = calculateSimpleProjection(playerName, null, opponentTeam, 0.15, routesPerGame, gameFlow); 
+                    displayResults({
+                        playerName,
+                        playerTeam: 'N/A',
+                        opponentTeam,
+                        coverageType: "Simple Projection (Player data missing)", 
+                        coverageFreq: 100,
+                        coverageBreakdown: [],
+                        targetShare: result.targetShare,
+                        tprr: result.tprr,
+                        sepScore: result.sepScore,
+                        expectedReceptions: result.expectedReceptions,
+                        receptionScore: result.edgeScore,
+                        bettingLine: bettingLine
+                    });
+                    return; 
                 }
 
                 const playerTeam = playerData[0].team;
                 const targetShare = (playerData[0].tprr_player * 100).toFixed(1);
 
-                // 2. Get opponent's coverage frequencies
+                // 2. Get opponent's coverage frequencies (using SEASON)
                 const { data: coverageData, error: coverageError } = await supabaseClient
                     .from('defensive_coverages')
                     .select('*')
                     .eq('team_name', opponentTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .limit(1);
 
-                if (coverageError || !coverageData || coverageData.length === 0) {
-                    // Fallback to a message for missing defense data
-                    console.warn(`No defensive coverage data found for ${opponentTeam}. Using default values.`);
+                if (coverageError) {
+                    console.error(`Error fetching defensive_coverages for ${opponentTeam} (Season ${SEASON}):`, coverageError);
+                    throw new Error(`Defensive coverage data error for ${opponentTeam}: ${coverageError.message}`);
+                }
+
+                if (!coverageData || coverageData.length === 0) {
+                    console.warn(`No defensive coverage data for ${opponentTeam} (Season ${SEASON}), using defaults for calculation.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     displayResults({
                         playerName,
                         playerTeam,
                         opponentTeam,
-                        coverageType: "Default Coverage", // Indicate default was used
+                        coverageType: "Simple Projection (Defensive coverage missing)", 
                         coverageFreq: 100,
-                        coverageBreakdown: [], // Empty breakdown for default
-                        targetShare,
+                        coverageBreakdown: [],
+                        targetShare: result.targetShare,
                         tprr: result.tprr,
                         sepScore: result.sepScore,
                         expectedReceptions: result.expectedReceptions,
-                        receptionScore: result.edgeScore, // Using edgeScore as a generic score if no full model
+                        receptionScore: result.edgeScore,
                         bettingLine: bettingLine
                     });
-                    return; // Exit after displaying simple projection
+                    return; 
                 }
 
                 const coverage = coverageData[0];
                 
-                // Define coverage types for weighted analysis
                 const coverageTypes = [
                     { name: 'Man Coverage', pct: coverage.man_pct },
                     { name: 'Cover 2', pct: coverage.cover_2_pct },
@@ -1540,34 +1558,38 @@
                     { name: 'Cover 6', pct: coverage.cover_6_pct }
                 ];
 
-                // 3. Get player stats for ALL coverage types
+                // 3. Get player stats for ALL coverage types (using SEASON)
                 const { data: playerStats, error: statsError } = await supabaseClient
                     .from('player_cover_stats')
                     .select('coverage_type, tprr_player, separation_score')
                     .eq('player_name', playerName)
                     .eq('team', playerTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
-                if (statsError || !playerStats || playerStats.length === 0) {
-                    // Fallback to simple projection if no detailed player coverage stats
-                    console.warn(`No detailed coverage stats found for ${playerName}. Using simple projection.`);
+                if (statsError) {
+                    console.error(`Error fetching detailed player_cover_stats for ${playerName} (Season ${SEASON}):`, statsError);
+                    throw new Error(`Player coverage stats error for ${playerName}: ${statsError.message}`);
+                }
+
+                if (!playerStats || playerStats.length === 0) {
+                    console.warn(`No detailed coverage stats found for ${playerName} (Season ${SEASON}), using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     displayResults({
                         playerName,
                         playerTeam,
                         opponentTeam,
-                        coverageType: "Simple Projection", // Indicate simple was used
+                        coverageType: "Simple Projection (Player coverage stats missing)",
                         coverageFreq: 100,
                         coverageBreakdown: [],
-                        targetShare,
+                        targetShare: result.targetShare,
                         tprr: result.tprr,
                         sepScore: result.sepScore,
                         expectedReceptions: result.expectedReceptions,
                         receptionScore: result.edgeScore,
                         bettingLine: bettingLine
                     });
-                    return; // Exit after displaying simple projection
+                    return; 
                 }
 
                 // Calculate weighted TPRR and separation scores
@@ -1595,48 +1617,49 @@
                 });
 
                 if (totalWeight === 0) {
-                     // Fallback to simple projection if weighted calculation cannot be performed
-                    console.warn(`No valid coverage data found for ${playerName} to calculate weighted scores. Using simple projection.`);
+                    console.warn(`No valid coverage data for ${playerName} from fetched stats to calculate weighted scores. Using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     displayResults({
                         playerName,
                         playerTeam,
                         opponentTeam,
-                        coverageType: "Simple Projection",
+                        coverageType: "Simple Projection (Weighted calc failed)",
                         coverageFreq: 100,
                         coverageBreakdown: [],
-                        targetShare,
+                        targetShare: result.targetShare,
                         tprr: result.tprr,
                         sepScore: result.sepScore,
                         expectedReceptions: result.expectedReceptions,
                         receptionScore: result.edgeScore,
                         bettingLine: bettingLine
                     });
-                    return; // Exit after displaying simple projection
+                    return; 
                 }
 
-                // Normalize weighted averages
                 const stats = {
                     tprr_player: weightedTPRR / totalWeight,
                     separation_score: weightedSeparation / totalWeight
                 };
 
-                // Find most frequent coverage for display
                 const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
 
-                // 4. Get defensive matchup stats
-                const { data: defStats, error: defError } = await supabaseClient
+                // 4. Get defensive matchup stats (using SEASON)
+                const { data: defStats, error: defMatchupError } = await supabaseClient
                     .from('defensive_matchups')
                     .select('tprr_allowed, catch_rate_allowed')
                     .eq('defensive_team_name', opponentTeam)
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .eq('coverage_type', mostFrequent.name)
                     .limit(1);
                 
-                // Use default defensive matchup stats if not found
+                if (defMatchupError) {
+                    console.error(`Error fetching defensive_matchups for ${opponentTeam} (Season ${SEASON}):`, defMatchupError);
+                    // Do not throw error, let it use default defMatchup
+                }
+
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
                 if (!defStats || defStats.length === 0) {
-                    console.warn(`No specific defensive matchup stats for ${opponentTeam} in ${mostFrequent.name} coverage. Using default.`);
+                    console.warn(`No specific defensive matchup stats for ${opponentTeam} in ${mostFrequent.name} coverage (Season ${SEASON}). Using default.`);
                 }
 
                 // 5. Calculate score using weighted stats
@@ -1651,7 +1674,9 @@
                     defMatchup.catch_rate_allowed
                 );
 
-                // Display results
+                const projection = parseFloat(result.expectedReceptions);
+                const edgeScore = projection - bettingLine;
+
                 displayResults({
                     playerName,
                     playerTeam,
@@ -1668,6 +1693,7 @@
                 });
 
             } catch (error) {
+                console.error('Projection calculation failed:', error);
                 showError(error.message);
             } finally {
                 showLoading(false);
@@ -1724,7 +1750,6 @@
         }
 
         function displayResults(data) {
-            // Construct coverage info for display
             let coverageInfoHtml = `<h4>Coverage Analysis</h4>`;
             if (data.coverageBreakdown && data.coverageBreakdown.length > 0) {
                 coverageInfoHtml += `<p>Defensive coverages faced by ${data.opponentTeam}:</p><ul>`;
@@ -1732,8 +1757,6 @@
                     coverageInfoHtml += `<li>${item.name}: ${item.frequency}% (Player TPRR: ${item.playerTPRR}%)</li>`;
                 });
                 coverageInfoHtml += `</ul>`;
-            } else if (data.coverageType === "Weighted Analysis") {
-                coverageInfoHtml += `<p>All defensive coverages analyzed by frequency</p>`;
             } else {
                 coverageInfoHtml += `<p>${data.coverageType} used due to missing detailed data for player or defense.</p>`;
             }
@@ -1758,14 +1781,14 @@
             if (edgeDifference >= 1.5) {
                 interpretation = 'GOOD EDGE - Significant positive value';
                 interpretClass = 'score-high';
-            } else if (edgeDifference >= 0.5) { // Slightly lowered threshold for medium
+            } else if (edgeDifference >= 0.5) { 
                 interpretation = 'MODERATE EDGE - Positive value, consider';
                 interpretClass = 'score-medium';
             } else if (edgeDifference >= 0) {
                 interpretation = 'SLIGHT EDGE - Proceed with caution';
                 interpretClass = 'score-medium';
             }
-            else if (edgeDifference > -0.5) { // Added a slightly negative range to medium
+            else if (edgeDifference > -0.5) { 
                 interpretation = 'NEUTRAL EDGE - Minimal difference';
                 interpretClass = 'score-medium';
             }
@@ -1801,22 +1824,21 @@
 
         // Autocomplete functionality
         async function setupAutocomplete() {
-            await loadPlayerNames(); // Ensure player names are loaded before autocomplete setup
+            await loadPlayerNames(); 
             setupPlayerAutocomplete();
             setupTeamAutocomplete();
         }
 
         async function loadPlayerNames() {
-            // CRITICAL CHECK: Ensure supabaseClient is ready
             if (!supabaseClient) {
                 console.warn('Supabase client not initialized when attempting to load player names for autocomplete.');
-                return; // Exit if client not ready
+                return; 
             }
             try {
                 const { data, error } = await supabaseClient
                     .from('player_cover_stats')
                     .select('player_name')
-                    .eq('season', SEASON)
+                    .eq('season', SEASON) 
                     .eq('coverage_type', 'Overall');
                 
                 if (data) {
@@ -1826,8 +1848,6 @@
                 }
                 if (error) {
                     console.error('Error loading player names for autocomplete:', error);
-                    // This error might not be critical enough to show to the user immediately,
-                    // but it's important for debugging.
                 }
             } catch (error) {
                 console.error('Error loading player names (catch block):', error);
@@ -1921,7 +1941,7 @@
                 
                 const filtered = teams.filter(team => 
                     team.toLowerCase().includes(value) || 
-                    normalizeTeamName(value).toLowerCase() === team.toLowerCase() // Also check abbreviation match
+                    normalizeTeamName(value).toLowerCase() === team.toLowerCase() 
                 ).slice(0, 8);
                 
                 if (filtered.length > 0) {
