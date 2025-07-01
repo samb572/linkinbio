@@ -748,13 +748,13 @@
         const coverageAdjustment = performanceDiff * coverageImpact;
         const adjustedTPRR = tprr + coverageAdjustment;
 
-        // Coverage Adjusted TPRR (squared)
+        // Coverage Adjusted TPRR (linear dampening)
         const coverageAdjBase = (adjustedTPRR / 25) * 10;
-        const coverageAdjTPRR = Math.pow(Math.min(coverageAdjBase, 12), 2);
+        const coverageAdjTPRR = Math.min(coverageAdjBase * 1.5, 120);
 
-        // Normalized Separation (squared)
+        // Normalized Separation (linear dampening)
         const sepBase = (sepScore / 0.25) * 10;
-        const normalizedSep = Math.pow(Math.min(sepBase, 12), 2);
+        const normalizedSep = Math.min(sepBase * 1.5, 120);
 
         // Volume Factor
         const volumeFactor = Math.min((targetShare * routesPerGame) / 10, 100);
@@ -780,7 +780,7 @@
             qualityMultiplier = 0.75;
         }
 
-        const finalScore = baseScore * qualityMultiplier;
+        const finalScore = Math.min(baseScore * qualityMultiplier, 100);
 
         // Reception Score Confidence Multiplier
         let confidenceMultiplier = 1.0;
@@ -796,10 +796,10 @@
             confidenceMultiplier = 1.25;  // 25% boost for excellent confidence
         }
 
-        // Expected Receptions (with confidence adjustment)
+        // Expected Receptions (with confidence adjustment and cap)
         const gameFlowMultiplier = 0.8 + (gameFlow * 0.1);
         const baseExpectedReceptions = routesPerGame * (adjustedTPRR / 100) * (defCatchRate / 100) * gameFlowMultiplier;
-        const expectedReceptions = (baseExpectedReceptions * confidenceMultiplier).toFixed(1);
+        const expectedReceptions = Math.min(baseExpectedReceptions * confidenceMultiplier, 10.0).toFixed(1);
 
         return {
             finalScore: finalScore.toFixed(1),
