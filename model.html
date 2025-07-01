@@ -379,6 +379,57 @@
         margin-top: 5px;
         font-style: italic;
     }
+
+    .autocomplete-container {
+        position: relative;
+    }
+
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        border: 2px solid rgba(255, 215, 0, 0.3);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .autocomplete-suggestion {
+        padding: 12px 15px;
+        color: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+    }
+
+    .autocomplete-suggestion:hover,
+    .autocomplete-suggestion.selected {
+        background: rgba(255, 215, 0, 0.2);
+        color: #FFD700;
+    }
+
+    .autocomplete-suggestion:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-suggestions::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .autocomplete-suggestions::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .autocomplete-suggestions::-webkit-scrollbar-thumb {
+        background: rgba(255, 215, 0, 0.5);
+        border-radius: 3px;
+    }
     
     .game-context-scale {
         margin-top: 10px;
@@ -470,12 +521,18 @@
         <div class="input-card">
             <div class="input-group">
                 <label for="playerName">Player Name</label>
-                <input type="text" id="playerName" placeholder="e.g., Ja'Marr Chase">
+                <div class="autocomplete-container">
+                    <input type="text" id="playerName" placeholder="e.g., Ja'Marr Chase" autocomplete="off">
+                    <div class="autocomplete-suggestions" id="playerSuggestions"></div>
+                </div>
             </div>
             
             <div class="input-group">
                 <label for="opponentTeam">Opponent Team</label>
-                <input type="text" id="opponentTeam" placeholder="e.g., Jacksonville Jaguars or JAX">
+                <div class="autocomplete-container">
+                    <input type="text" id="opponentTeam" placeholder="e.g., Jacksonville Jaguars or JAX" autocomplete="off">
+                    <div class="autocomplete-suggestions" id="teamSuggestions"></div>
+                </div>
             </div>
             
             <div class="input-group">
@@ -564,6 +621,7 @@
         }
         
         setupPasswordHandling();
+        setupAutocomplete();
         document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
     });
 
@@ -905,6 +963,188 @@
 
     function hideResults() {
         document.getElementById('results').style.display = 'none';
+    }
+
+    // Autocomplete functionality
+    let playerList = [];
+    let selectedIndex = -1;
+
+    async function setupAutocomplete() {
+        // Load player names
+        await loadPlayerNames();
+        
+        // Setup player autocomplete
+        setupPlayerAutocomplete();
+        
+        // Setup team autocomplete
+        setupTeamAutocomplete();
+    }
+
+    async function loadPlayerNames() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('player_cover_stats')
+                .select('player_name')
+                .eq('season', SEASON)
+                .eq('coverage_type', 'Overall');
+            
+            if (data) {
+                // Get unique player names
+                const uniqueNames = [...new Set(data.map(player => player.player_name))];
+                playerList = uniqueNames.sort();
+            }
+        } catch (error) {
+            console.error('Error loading player names:', error);
+        }
+    }
+
+    function setupPlayerAutocomplete() {
+        const input = document.getElementById('playerName');
+        const suggestions = document.getElementById('playerSuggestions');
+        
+        input.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            selectedIndex = -1;
+            
+            if (value.length < 2) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            const filtered = playerList.filter(player => 
+                player.toLowerCase().includes(value)
+            ).slice(0, 8); // Show max 8 suggestions
+            
+            if (filtered.length > 0) {
+                suggestions.innerHTML = filtered.map(player => 
+                    `<div class="autocomplete-suggestion">${player}</div>`
+                ).join('');
+                suggestions.style.display = 'block';
+                
+                // Add click listeners
+                suggestions.querySelectorAll('.autocomplete-suggestion').forEach((item, index) => {
+                    item.addEventListener('click', () => {
+                        input.value = item.textContent;
+                        suggestions.style.display = 'none';
+                    });
+                });
+            } else {
+                suggestions.style.display = 'none';
+            }
+        });
+        
+        // Keyboard navigation
+        input.addEventListener('keydown', function(e) {
+            const items = suggestions.querySelectorAll('.autocomplete-suggestion');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                input.value = items[selectedIndex].textContent;
+                suggestions.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                suggestions.style.display = 'none';
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                suggestions.style.display = 'none';
+            }
+        });
+    }
+
+    function setupTeamAutocomplete() {
+        const input = document.getElementById('opponentTeam');
+        const suggestions = document.getElementById('teamSuggestions');
+        
+        const teams = [
+            'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills',
+            'Carolina Panthers', 'Chicago Bears', 'Cincinnati Bengals', 'Cleveland Browns',
+            'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
+            'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars', 'Kansas City Chiefs',
+            'Las Vegas Raiders', 'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins',
+            'Minnesota Vikings', 'New England Patriots', 'New Orleans Saints', 'New York Giants',
+            'New York Jets', 'Philadelphia Eagles', 'Pittsburgh Steelers', 'San Francisco 49ers',
+            'Seattle Seahawks', 'Tampa Bay Buccaneers', 'Tennessee Titans', 'Washington Commanders'
+        ];
+        
+        input.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            selectedIndex = -1;
+            
+            if (value.length < 1) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            const filtered = teams.filter(team => 
+                team.toLowerCase().includes(value)
+            ).slice(0, 8);
+            
+            if (filtered.length > 0) {
+                suggestions.innerHTML = filtered.map(team => 
+                    `<div class="autocomplete-suggestion">${team}</div>`
+                ).join('');
+                suggestions.style.display = 'block';
+                
+                // Add click listeners
+                suggestions.querySelectorAll('.autocomplete-suggestion').forEach((item, index) => {
+                    item.addEventListener('click', () => {
+                        input.value = item.textContent;
+                        suggestions.style.display = 'none';
+                    });
+                });
+            } else {
+                suggestions.style.display = 'none';
+            }
+        });
+        
+        // Keyboard navigation (same as player)
+        input.addEventListener('keydown', function(e) {
+            const items = suggestions.querySelectorAll('.autocomplete-suggestion');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                input.value = items[selectedIndex].textContent;
+                suggestions.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                suggestions.style.display = 'none';
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                suggestions.style.display = 'none';
+            }
+        });
+    }
+
+    function updateSelection(items) {
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
     }
 </script>
 ```
