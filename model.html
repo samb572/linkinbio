@@ -521,7 +521,7 @@
                 <span class="result-value" id="targetShare">-</span>
             </div>
             <div class="result-item">
-                <span class="result-label">TPRR vs Coverage</span>
+                <span class="result-label">Weighted TPRR</span>
                 <span class="result-value" id="tprrDisplay">-</span>
             </div>
             <div class="result-item">
@@ -668,34 +668,64 @@
 
             const coverage = coverageData[0];
             
-            // Find most frequent coverage
+            // Define coverage types for weighted analysis
             const coverageTypes = [
                 { name: 'Man Coverage', pct: coverage.man_pct },
                 { name: 'Cover 2', pct: coverage.cover_2_pct },
-                { name: 'Cover 2 Man', pct: coverage.cover_2_man_pct },
                 { name: 'Cover 3', pct: coverage.cover_3_pct },
                 { name: 'Cover 4', pct: coverage.cover_4_pct },
                 { name: 'Cover 6', pct: coverage.cover_6_pct }
             ];
 
-            const validCoverages = coverageTypes.filter(c => c.pct > 0);
-            const mostFrequent = validCoverages.sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
-
-            // 3. Get player stats vs this coverage
+            // 3. Get player stats for ALL coverage types
             const { data: playerStats, error: statsError } = await supabaseClient
                 .from('player_cover_stats')
-                .select('tprr_player, separation_score')
+                .select('coverage_type, tprr_player, separation_score')
                 .eq('player_name', playerName)
                 .eq('team', playerTeam)
                 .eq('season', SEASON)
-                .eq('coverage_type', mostFrequent.name)
-                .limit(1);
+                .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
             if (statsError || !playerStats || playerStats.length === 0) {
-                throw new Error(`No stats found for ${playerName} vs ${mostFrequent.name}`);
+                throw new Error(`No coverage stats found for ${playerName}`);
             }
 
-            const stats = playerStats[0];
+            // Calculate weighted TPRR and separation scores
+            let weightedTPRR = 0;
+            let weightedSeparation = 0;
+            let totalWeight = 0;
+            let coverageBreakdown = [];
+
+            coverageTypes.forEach(coverage => {
+                if (coverage.pct > 0) {
+                    const playerStat = playerStats.find(s => s.coverage_type === coverage.name);
+                    if (playerStat) {
+                        const weight = coverage.pct / 100;
+                        weightedTPRR += (playerStat.tprr_player * 100) * weight;
+                        weightedSeparation += (playerStat.separation_score || 0.2) * weight;
+                        totalWeight += weight;
+                        
+                        coverageBreakdown.push({
+                            name: coverage.name,
+                            frequency: coverage.pct,
+                            playerTPRR: (playerStat.tprr_player * 100).toFixed(1)
+                        });
+                    }
+                }
+            });
+
+            if (totalWeight === 0) {
+                throw new Error(`No valid coverage data found for ${playerName}`);
+            }
+
+            // Normalize weighted averages
+            const stats = {
+                tprr_player: weightedTPRR / totalWeight,
+                separation_score: weightedSeparation / totalWeight
+            };
+
+            // Find most frequent coverage for display
+            const mostFrequent = coverageTypes.filter(c => c.pct > 0).sort((a, b) => b.pct - a.pct)[0] || { name: 'Cover 3', pct: 30 };
 
             // 4. Get defensive matchup stats
             const { data: defStats, error: defError } = await supabaseClient
@@ -708,10 +738,10 @@
 
             const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
 
-            // 5. Calculate score
+            // 5. Calculate score using weighted stats
             const result = calculateReceptionScore(
-                stats.tprr_player * 100,
-                stats.separation_score || 0.2,
+                stats.tprr_player,
+                stats.separation_score,
                 parseFloat(targetShare),
                 routesPerGame,
                 gameFlow,
@@ -725,11 +755,12 @@
                 playerName,
                 playerTeam,
                 opponentTeam,
-                coverageType: mostFrequent.name,
-                coverageFreq: mostFrequent.pct,
+                coverageType: "Weighted Analysis",
+                coverageFreq: 100, // Show as 100% since it's weighted across all
+                coverageBreakdown,
                 targetShare,
-                tprr: (stats.tprr_player * 100).toFixed(1),
-                sepScore: stats.separation_score ? stats.separation_score.toFixed(3) : '0.200',
+                tprr: stats.tprr_player.toFixed(1),
+                sepScore: stats.separation_score.toFixed(3),
                 expectedReceptions: result.expectedReceptions,
                 receptionScore: result.finalScore
             });
@@ -741,19 +772,19 @@
         }
     }
 
-    function calculateReceptionScore(tprr, sepScore, targetShare, routesPerGame, gameFlow, coverageFreq, defTPRR, defCatchRate) {
-        // NEW Coverage Adjustment Logic
-        const performanceDiff = tprr - targetShare;
-        const coverageImpact = Math.min(coverageFreq / 100, 0.6);
+    function calculateReceptionScore(weightedTPRR, weightedSeparation, targetShare, routesPerGame, gameFlow, primaryCoverageFreq, defTPRR, defCatchRate) {
+        // Coverage Adjustment using weighted TPRR
+        const performanceDiff = weightedTPRR - targetShare;
+        const coverageImpact = Math.min(primaryCoverageFreq / 100, 0.6);
         const coverageAdjustment = performanceDiff * coverageImpact;
-        const adjustedTPRR = tprr + coverageAdjustment;
+        const adjustedTPRR = weightedTPRR + coverageAdjustment;
 
         // Coverage Adjusted TPRR (moderate exponential dampening)
         const coverageAdjBase = (adjustedTPRR / 25) * 10;
         const coverageAdjTPRR = Math.min(Math.pow(coverageAdjBase, 1.7), 140);
 
         // Normalized Separation (moderate exponential dampening)
-        const sepBase = (sepScore / 0.25) * 10;
+        const sepBase = (weightedSeparation / 0.25) * 10;
         const normalizedSep = Math.min(Math.pow(sepBase, 1.7), 140);
 
         // Volume Factor
@@ -776,7 +807,7 @@
 
         // Quality Multiplier
         let qualityMultiplier = 1.0;
-        if (tprr < 18) {
+        if (weightedTPRR < 18) {
             qualityMultiplier = 0.75;
         }
 
@@ -808,10 +839,21 @@
     }
 
     function displayResults(data) {
-        document.getElementById('coverageInfo').innerHTML = `
-            <h4>Primary Coverage: ${data.coverageType}</h4>
-            <p>${data.coverageFreq.toFixed(1)}% frequency</p>
-        `;
+        // Display coverage breakdown for weighted analysis
+        let coverageInfo = '';
+        if (data.coverageBreakdown && data.coverageBreakdown.length > 0) {
+            coverageInfo = `<h4>Weighted Coverage Analysis</h4>`;
+            data.coverageBreakdown.forEach(cov => {
+                coverageInfo += `<p>${cov.name}: ${cov.frequency.toFixed(1)}% (${cov.playerTPRR}% TPRR)</p>`;
+            });
+        } else {
+            coverageInfo = `
+                <h4>Primary Coverage: ${data.coverageType}</h4>
+                <p>${data.coverageFreq.toFixed(1)}% frequency</p>
+            `;
+        }
+        
+        document.getElementById('coverageInfo').innerHTML = coverageInfo;
         
         document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`;
         document.getElementById('defenseDisplay').textContent = data.opponentTeam;
