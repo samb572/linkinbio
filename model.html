@@ -727,7 +727,6 @@
                 <button class="mode-btn" id="bulkModeBtn">Bulk Analysis</button>
             </div>
 
-            <!-- Single Player Mode -->
             <div class="input-card" id="singleSection">
                 <div class="input-group">
                     <label for="playerName">Player Name</label>
@@ -772,7 +771,6 @@
                 <button class="calculate-btn" id="calculateBtn">Calculate Reception Projection</button>
             </div>
 
-            <!-- Bulk Analysis Mode -->
             <div class="input-card bulk-section" id="bulkSection">
                 <div class="bulk-filters">
                     <div class="input-group">
@@ -835,7 +833,6 @@
             
             <div id="errorDiv" class="error" style="display: none;"></div>
             
-            <!-- Single Player Results -->
             <div class="results" id="results" style="display: none;">
                 <div id="coverageInfo" class="coverage-info"></div>
                 
@@ -870,7 +867,6 @@
                 <div class="score-interpretation" id="interpretation"></div>
             </div>
 
-            <!-- Bulk Results -->
             <div class="bulk-results" id="bulkResults" style="display: none;">
                 <div class="bulk-results-header">
                     <div class="results-count" id="resultsCount">0 players analyzed</div>
@@ -884,12 +880,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
     <script>
-        // Initialize Supabase
-        let supabaseClient = null;
+        // Initialize Supabase client immediately when the script loads
+        // Make sure these are truly const and not re-assigned later
         const SUPABASE_URL = 'https://pyjtwdgapmbdgtpflzan.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
         const SEASON = 2024;
         const BULK_SEASON = 2025; // For bulk analysis using weekly_matchups
+
+        let supabaseClient = null; // Declared here, initialized in window.load
 
         let playerList = [];
         let selectedIndex = -1;
@@ -897,22 +895,24 @@
 
         window.addEventListener('load', function() {
             try {
-                if (typeof window.supabase !== 'undefined') {
+                // Check if window.supabase exists and create client
+                if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    console.log('Supabase client initialized successfully');
-                } else if (typeof Supabase !== 'undefined') {
-                    supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    console.log('Supabase client initialized successfully (alt)');
+                    console.log('Supabase client initialized successfully via window.supabase');
                 } else {
-                    console.error('Supabase library not loaded');
+                    console.error('Supabase library not loaded or createClient is not available. Check the script tag and network.');
+                    showError('Failed to load Supabase. Please check your browser console for details.');
+                    return; // Stop further execution if Supabase client cannot be initialized
                 }
             } catch (error) {
-                console.error('Error initializing Supabase:', error);
+                console.error('Error during Supabase client creation:', error);
+                showError('Error initializing Supabase client: ' + error.message + '. Ensure URL/Key are correct.');
+                return; // Stop further execution if initialization fails
             }
             
             setupPasswordHandling();
             setupModeToggle();
-            setupAutocomplete();
+            setupAutocomplete(); // This will call loadPlayerNames, which needs supabaseClient
             setupBulkTeams();
             document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
             document.getElementById('bulkCalculateBtn').addEventListener('click', runBulkAnalysis);
@@ -965,6 +965,7 @@
                 bulkSection.style.display = 'none';
                 results.style.display = 'none';
                 bulkResults.style.display = 'none';
+                hideError(); // Clear any previous errors
             });
 
             bulkModeBtn.addEventListener('click', () => {
@@ -974,6 +975,7 @@
                 bulkSection.style.display = 'block';
                 results.style.display = 'none';
                 bulkResults.style.display = 'none';
+                hideError(); // Clear any previous errors
             });
         }
 
@@ -1008,21 +1010,28 @@
             hideError();
             bulkResults = [];
 
+            // CRITICAL CHECK: Ensure supabaseClient is ready
+            if (!supabaseClient) {
+                showError('Supabase client not initialized. Cannot perform bulk analysis. Please refresh the page.');
+                showBulkLoading(false);
+                return; // Stop execution if client isn't ready
+            }
+
             try {
                 console.log('Starting bulk analysis...');
                 
-                // Test Supabase connection first
-                const { data: testData, error: testError } = await supabaseClient
-                    .from('player_cover_stats')
-                    .select('count')
+                // Robust test call to ensure the client is functional and the key is accepted
+                const { error: testError } = await supabaseClient
+                    .from('player_cover_stats') // Use a table you know exists
+                    .select('player_name')     // Select a valid column from that table
                     .limit(1);
 
                 if (testError) {
-                    console.error('Supabase connection test failed:', testError);
-                    throw new Error('Database connection failed: ' + testError.message);
+                    console.error('Supabase initial query failed:', testError);
+                    throw new Error(`Supabase connection failed: ${testError.message}. Double-check your API key and table permissions.`);
                 }
-
-                console.log('Database connection successful');
+                console.log('Supabase client is making requests successfully (initial test passed).');
+                updateProgress(5, `Connection verified. Fetching matchups...`);
 
                 // Get matchups based on filters
                 let matchupsQuery = supabaseClient
@@ -1042,7 +1051,14 @@
                     throw new Error('Error fetching matchups: ' + matchupError.message);
                 }
 
-                console.log(`Found ${matchups?.length || 0} matchups`);
+                if (!matchups || matchups.length === 0) {
+                    console.warn('No matchups found for the selected criteria.');
+                    showError('No matchups found for the selected criteria. Please adjust filters.');
+                    showBulkLoading(false);
+                    return;
+                }
+
+                console.log(`Found ${matchups.length} matchups`);
 
                 // Get all players for the selected team or all teams
                 let playerQuery = supabaseClient
@@ -1064,18 +1080,26 @@
                     throw new Error('Error fetching players: ' + playerError.message);
                 }
 
-                console.log(`Found ${players?.length || 0} players`);
+                if (!players || players.length === 0) {
+                    console.warn('No players found for the selected criteria.');
+                    showError('No players found for the selected criteria. Please adjust filters or ensure player data exists.');
+                    showBulkLoading(false);
+                    return;
+                }
+
+                console.log(`Found ${players.length} players`);
 
                 // Get unique players and limit to top 50 by target rate
-                const uniquePlayers = [...new Map(players.map(p => [p.player_name, p])).values()]
-                    .slice(0, 50); // Limit to top 50 players by target rate
+                const uniquePlayers = Array.from(new Map(players.map(p => [p.player_name, p])).values())
+                                        .slice(0, 50); // Limit to top 50 players by target rate
                 
                 updateProgress(0, `Starting analysis of top ${uniquePlayers.length} players...`);
 
                 // Process each player against their matchups
                 for (let i = 0; i < uniquePlayers.length; i++) {
                     const player = uniquePlayers[i];
-                    updateProgress((i / uniquePlayers.length) * 100, `Analyzing ${player.player_name}...`);
+                    // Update progress more consistently
+                    updateProgress(((i + 1) / uniquePlayers.length) * 100, `Analyzing ${player.player_name}...`);
 
                     // Find matchups for this player's team
                     const playerMatchups = matchups.filter(m => 
@@ -1102,7 +1126,8 @@
                                 });
                             }
                         } catch (error) {
-                            console.log(`Error calculating ${player.player_name} vs ${opponent}:`, error.message);
+                            // Log the error but don't stop the entire bulk analysis for one player
+                            console.warn(`Skipping projection for ${player.player_name} vs ${opponent} due to error: ${error.message}`);
                         }
                     }
                 }
@@ -1110,13 +1135,13 @@
                 // Sort results by projected receptions (highest first)
                 bulkResults.sort((a, b) => parseFloat(b.expectedReceptions) - parseFloat(a.expectedReceptions));
 
-                // Limit to top 50 results
+                // Limit to top 50 results (already limited uniquePlayers to 50, but this re-limits final results if many matchups per player)
                 bulkResults = bulkResults.slice(0, 50);
 
                 displayBulkResults();
 
             } catch (error) {
-                console.error('Bulk analysis error:', error);
+                console.error('Bulk analysis failed:', error);
                 showError(error.message);
             } finally {
                 showBulkLoading(false);
@@ -1124,6 +1149,10 @@
         }
 
         async function calculatePlayerProjection(playerName, opponentTeam, gameFlow, routesPerGame, bettingLine) {
+            // This function is called internally by runBulkAnalysis and calculateProjection,
+            // so the supabaseClient check is handled by the calling function.
+            // However, for direct calls, it would need its own check.
+
             try {
                 // Get player's team and overall stats
                 const { data: playerData, error: playerError } = await supabaseClient
@@ -1135,11 +1164,11 @@
                     .limit(1);
 
                 if (playerError) {
-                    throw new Error(`Player error for ${playerName}: ${playerError.message}`);
+                    throw new Error(`Player data error for ${playerName}: ${playerError.message}`);
                 }
 
                 if (!playerData || playerData.length === 0) {
-                    throw new Error(`Player "${playerName}" not found`);
+                    throw new Error(`Player "${playerName}" not found or no overall stats.`);
                 }
 
                 const playerTeam = playerData[0].team;
@@ -1154,12 +1183,12 @@
                     .limit(1);
 
                 if (coverageError) {
-                    throw new Error(`Coverage error for ${opponentTeam}: ${coverageError.message}`);
+                    throw new Error(`Coverage data error for ${opponentTeam}: ${coverageError.message}`);
                 }
 
                 if (!coverageData || coverageData.length === 0) {
                     // Use default coverage if not found
-                    console.log(`No coverage data for ${opponentTeam}, using defaults`);
+                    console.warn(`No defensive coverage data for ${opponentTeam}, using defaults for calculation.`);
                     const defaultCoverage = {
                         man_pct: 25,
                         cover_2_pct: 15,
@@ -1195,11 +1224,12 @@
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
                 if (statsError) {
-                    throw new Error(`Stats error for ${playerName}: ${statsError.message}`);
+                    throw new Error(`Player coverage stats error for ${playerName}: ${statsError.message}`);
                 }
 
                 if (!playerStats || playerStats.length === 0) {
                     // Use simple projection if no detailed stats
+                    console.warn(`No detailed coverage stats for ${playerName}, using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     return {
                         ...result,
@@ -1225,6 +1255,7 @@
                 });
 
                 if (totalWeight === 0) {
+                    console.warn(`No valid coverage data for ${playerName} to calculate weighted scores. Using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     return {
                         ...result,
@@ -1277,22 +1308,24 @@
                 };
 
             } catch (error) {
-                console.error(`Error in calculatePlayerProjection for ${playerName}:`, error);
-                throw error;
+                console.error(`Error in calculatePlayerProjection for ${playerName} vs ${opponentTeam}:`, error);
+                throw error; // Re-throw to be caught by the calling function (runBulkAnalysis or calculateProjection)
             }
         }
 
         function calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow) {
             // Simple projection when detailed data is not available
             const gameScriptMultiplier = 0.85 + (gameFlow * 0.075);
-            const baseProjection = routesPerGame * (parseFloat(targetShare) / 100) * 0.65 * gameScriptMultiplier; // 65% catch rate assumption
+            // Fallback TPRR if not available, or use the targetShare itself
+            const effectiveTPRR = parseFloat(targetShare) / 100; 
+            const baseProjection = routesPerGame * effectiveTPRR * 0.65 * gameScriptMultiplier; // 65% catch rate assumption
             
             return {
                 playerName,
                 playerTeam,
                 opponentTeam,
                 targetShare,
-                tprr: targetShare,
+                tprr: (effectiveTPRR * 100).toFixed(1), // Display as percentage
                 sepScore: "0.200", // Default separation
                 expectedReceptions: baseProjection.toFixed(1),
                 edgeScore: 0
@@ -1306,7 +1339,7 @@
             resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`;
             
             if (bulkResults.length === 0) {
-                resultsList.innerHTML = '<div class="loading">No players found matching criteria</div>';
+                resultsList.innerHTML = '<div class="loading">No players found matching criteria or no projections generated.</div>';
                 document.getElementById('bulkResults').style.display = 'block';
                 return;
             }
@@ -1438,6 +1471,13 @@
                 showError('Please fill in all fields');
                 return;
             }
+            
+            // CRITICAL CHECK: Ensure supabaseClient is ready
+            if (!supabaseClient) {
+                showError('Supabase client not initialized. Cannot calculate projection. Please refresh the page.');
+                showLoading(false);
+                return; // Stop execution if client isn't ready
+            }
 
             showLoading(true);
             hideError();
@@ -1454,7 +1494,7 @@
                     .limit(1);
 
                 if (playerError || !playerData || playerData.length === 0) {
-                    throw new Error(`Player "${playerName}" not found in database`);
+                    throw new Error(`Player "${playerName}" not found in database or no overall stats for them.`);
                 }
 
                 const playerTeam = playerData[0].team;
@@ -1469,7 +1509,24 @@
                     .limit(1);
 
                 if (coverageError || !coverageData || coverageData.length === 0) {
-                    throw new Error(`No coverage data found for ${opponentTeam}`);
+                    // Fallback to a message for missing defense data
+                    console.warn(`No defensive coverage data found for ${opponentTeam}. Using default values.`);
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    displayResults({
+                        playerName,
+                        playerTeam,
+                        opponentTeam,
+                        coverageType: "Default Coverage", // Indicate default was used
+                        coverageFreq: 100,
+                        coverageBreakdown: [], // Empty breakdown for default
+                        targetShare,
+                        tprr: result.tprr,
+                        sepScore: result.sepScore,
+                        expectedReceptions: result.expectedReceptions,
+                        receptionScore: result.edgeScore, // Using edgeScore as a generic score if no full model
+                        bettingLine: bettingLine
+                    });
+                    return; // Exit after displaying simple projection
                 }
 
                 const coverage = coverageData[0];
@@ -1493,7 +1550,24 @@
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
                 if (statsError || !playerStats || playerStats.length === 0) {
-                    throw new Error(`No coverage stats found for ${playerName}`);
+                    // Fallback to simple projection if no detailed player coverage stats
+                    console.warn(`No detailed coverage stats found for ${playerName}. Using simple projection.`);
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    displayResults({
+                        playerName,
+                        playerTeam,
+                        opponentTeam,
+                        coverageType: "Simple Projection", // Indicate simple was used
+                        coverageFreq: 100,
+                        coverageBreakdown: [],
+                        targetShare,
+                        tprr: result.tprr,
+                        sepScore: result.sepScore,
+                        expectedReceptions: result.expectedReceptions,
+                        receptionScore: result.edgeScore,
+                        bettingLine: bettingLine
+                    });
+                    return; // Exit after displaying simple projection
                 }
 
                 // Calculate weighted TPRR and separation scores
@@ -1521,7 +1595,24 @@
                 });
 
                 if (totalWeight === 0) {
-                    throw new Error(`No valid coverage data found for ${playerName}`);
+                     // Fallback to simple projection if weighted calculation cannot be performed
+                    console.warn(`No valid coverage data found for ${playerName} to calculate weighted scores. Using simple projection.`);
+                    const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
+                    displayResults({
+                        playerName,
+                        playerTeam,
+                        opponentTeam,
+                        coverageType: "Simple Projection",
+                        coverageFreq: 100,
+                        coverageBreakdown: [],
+                        targetShare,
+                        tprr: result.tprr,
+                        sepScore: result.sepScore,
+                        expectedReceptions: result.expectedReceptions,
+                        receptionScore: result.edgeScore,
+                        bettingLine: bettingLine
+                    });
+                    return; // Exit after displaying simple projection
                 }
 
                 // Normalize weighted averages
@@ -1541,8 +1632,12 @@
                     .eq('season', SEASON)
                     .eq('coverage_type', mostFrequent.name)
                     .limit(1);
-
+                
+                // Use default defensive matchup stats if not found
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
+                if (!defStats || defStats.length === 0) {
+                    console.warn(`No specific defensive matchup stats for ${opponentTeam} in ${mostFrequent.name} coverage. Using default.`);
+                }
 
                 // 5. Calculate score using weighted stats
                 const result = calculateReceptionScore(
@@ -1629,10 +1724,20 @@
         }
 
         function displayResults(data) {
-            document.getElementById('coverageInfo').innerHTML = `
-                <h4>Weighted Coverage Analysis</h4>
-                <p>All defensive coverages analyzed by frequency</p>
-            `;
+            // Construct coverage info for display
+            let coverageInfoHtml = `<h4>Coverage Analysis</h4>`;
+            if (data.coverageBreakdown && data.coverageBreakdown.length > 0) {
+                coverageInfoHtml += `<p>Defensive coverages faced by ${data.opponentTeam}:</p><ul>`;
+                data.coverageBreakdown.forEach(item => {
+                    coverageInfoHtml += `<li>${item.name}: ${item.frequency}% (Player TPRR: ${item.playerTPRR}%)</li>`;
+                });
+                coverageInfoHtml += `</ul>`;
+            } else if (data.coverageType === "Weighted Analysis") {
+                coverageInfoHtml += `<p>All defensive coverages analyzed by frequency</p>`;
+            } else {
+                coverageInfoHtml += `<p>${data.coverageType} used due to missing detailed data for player or defense.</p>`;
+            }
+            document.getElementById('coverageInfo').innerHTML = coverageInfoHtml;
             
             const projection = parseFloat(data.expectedReceptions);
             const line = data.bettingLine;
@@ -1651,13 +1756,21 @@
             let interpretClass = '';
 
             if (edgeDifference >= 1.5) {
-                interpretation = 'GOOD EDGE - Positive value';
+                interpretation = 'GOOD EDGE - Significant positive value';
                 interpretClass = 'score-high';
-            } else if (edgeDifference >= 0) {
-                interpretation = 'MIXED EDGE - Proceed with caution';
+            } else if (edgeDifference >= 0.5) { // Slightly lowered threshold for medium
+                interpretation = 'MODERATE EDGE - Positive value, consider';
                 interpretClass = 'score-medium';
-            } else {
-                interpretation = 'POOR EDGE - Avoid bet';
+            } else if (edgeDifference >= 0) {
+                interpretation = 'SLIGHT EDGE - Proceed with caution';
+                interpretClass = 'score-medium';
+            }
+            else if (edgeDifference > -0.5) { // Added a slightly negative range to medium
+                interpretation = 'NEUTRAL EDGE - Minimal difference';
+                interpretClass = 'score-medium';
+            }
+            else {
+                interpretation = 'POOR EDGE - Negative value, avoid bet';
                 interpretClass = 'score-low';
             }
 
@@ -1688,12 +1801,17 @@
 
         // Autocomplete functionality
         async function setupAutocomplete() {
-            await loadPlayerNames();
+            await loadPlayerNames(); // Ensure player names are loaded before autocomplete setup
             setupPlayerAutocomplete();
             setupTeamAutocomplete();
         }
 
         async function loadPlayerNames() {
+            // CRITICAL CHECK: Ensure supabaseClient is ready
+            if (!supabaseClient) {
+                console.warn('Supabase client not initialized when attempting to load player names for autocomplete.');
+                return; // Exit if client not ready
+            }
             try {
                 const { data, error } = await supabaseClient
                     .from('player_cover_stats')
@@ -1704,9 +1822,15 @@
                 if (data) {
                     const uniqueNames = [...new Set(data.map(player => player.player_name))];
                     playerList = uniqueNames.sort();
+                    console.log('Player names loaded for autocomplete.');
+                }
+                if (error) {
+                    console.error('Error loading player names for autocomplete:', error);
+                    // This error might not be critical enough to show to the user immediately,
+                    // but it's important for debugging.
                 }
             } catch (error) {
-                console.error('Error loading player names:', error);
+                console.error('Error loading player names (catch block):', error);
             }
         }
 
@@ -1796,7 +1920,8 @@
                 }
                 
                 const filtered = teams.filter(team => 
-                    team.toLowerCase().includes(value)
+                    team.toLowerCase().includes(value) || 
+                    normalizeTeamName(value).toLowerCase() === team.toLowerCase() // Also check abbreviation match
                 ).slice(0, 8);
                 
                 if (filtered.length > 0) {
