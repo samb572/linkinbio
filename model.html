@@ -496,6 +496,12 @@
                 <div class="info-text">Average routes run per game by the player</div>
             </div>
             
+            <div class="input-group">
+                <label for="bettingLine">Betting Line (Receptions)</label>
+                <input type="number" id="bettingLine" placeholder="e.g., 5.5" step="0.5" min="0" max="15">
+                <div class="info-text">Over/Under line for player receptions</div>
+            </div>
+            
             <button class="calculate-btn" id="calculateBtn">Calculate Reception Projection</button>
         </div>
         
@@ -533,7 +539,7 @@
                 <span class="result-value" id="expectedReceptions" style="font-size: 24px;">-</span>
             </div>
             <div class="result-item">
-                <span class="result-label" style="font-size: 18px;">Reception Score</span>
+                <span class="result-label" style="font-size: 18px;">Edge Score</span>
                 <span class="result-value final-score" id="finalScore">-</span>
             </div>
             <div class="score-interpretation" id="interpretation"></div>
@@ -627,8 +633,9 @@
         const opponentTeam = normalizeTeamName(document.getElementById('opponentTeam').value);
         const gameFlow = parseInt(document.getElementById('gameFlow').value);
         const routesPerGame = parseInt(document.getElementById('routesPerGame').value);
+        const bettingLine = parseFloat(document.getElementById('bettingLine').value);
 
-        if (!playerName || !opponentTeam || !routesPerGame) {
+        if (!playerName || !opponentTeam || !routesPerGame || !bettingLine) {
             showError('Please fill in all fields');
             return;
         }
@@ -762,7 +769,8 @@
                 tprr: stats.tprr_player.toFixed(1),
                 sepScore: stats.separation_score.toFixed(3),
                 expectedReceptions: result.expectedReceptions,
-                receptionScore: result.finalScore
+                receptionScore: result.finalScore,
+                bettingLine: bettingLine
             });
 
         } catch (error) {
@@ -839,21 +847,16 @@
     }
 
     function displayResults(data) {
-        // Display coverage breakdown for weighted analysis
-        let coverageInfo = '';
-        if (data.coverageBreakdown && data.coverageBreakdown.length > 0) {
-            coverageInfo = `<h4>Weighted Coverage Analysis</h4>`;
-            data.coverageBreakdown.forEach(cov => {
-                coverageInfo += `<p>${cov.name}: ${cov.frequency.toFixed(1)}% (${cov.playerTPRR}% TPRR)</p>`;
-            });
-        } else {
-            coverageInfo = `
-                <h4>Primary Coverage: ${data.coverageType}</h4>
-                <p>${data.coverageFreq.toFixed(1)}% frequency</p>
-            `;
-        }
+        // Simplified coverage info
+        document.getElementById('coverageInfo').innerHTML = `
+            <h4>Weighted Coverage Analysis</h4>
+            <p>All defensive coverages analyzed by frequency</p>
+        `;
         
-        document.getElementById('coverageInfo').innerHTML = coverageInfo;
+        // Calculate edge score (simple difference between projection and line)
+        const projection = parseFloat(data.expectedReceptions);
+        const line = data.bettingLine;
+        const edgeScore = (projection - line).toFixed(1);
         
         document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`;
         document.getElementById('defenseDisplay').textContent = data.opponentTeam;
@@ -861,22 +864,20 @@
         document.getElementById('tprrDisplay').textContent = `${data.tprr}%`;
         document.getElementById('sepScoreDisplay').textContent = data.sepScore;
         document.getElementById('expectedReceptions').textContent = data.expectedReceptions;
-        document.getElementById('finalScore').textContent = data.receptionScore;
+        document.getElementById('finalScore').textContent = edgeScore;
 
+        // Interpretation based on edge score
         let interpretation = '';
         let interpretClass = '';
 
-        if (data.receptionScore >= 80) {
-            interpretation = 'EXCELLENT BET - Strong value, high confidence';
+        if (edgeScore >= 1.5) {
+            interpretation = 'GOOD EDGE - Positive value';
             interpretClass = 'score-high';
-        } else if (data.receptionScore >= 60) {
-            interpretation = 'GOOD BET - Positive indicators, moderate confidence';
-            interpretClass = 'score-medium';
-        } else if (data.receptionScore >= 40) {
-            interpretation = 'NEUTRAL - Mixed signals, proceed with caution';
+        } else if (edgeScore >= 0) {
+            interpretation = 'MIXED EDGE - Proceed with caution';
             interpretClass = 'score-medium';
         } else {
-            interpretation = 'POOR BET - Negative indicators, avoid';
+            interpretation = 'POOR EDGE - Avoid bet';
             interpretClass = 'score-low';
         }
 
