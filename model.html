@@ -856,7 +856,8 @@
         // Calculate edge score (simple difference between projection and line)
         const projection = parseFloat(data.expectedReceptions);
         const line = data.bettingLine;
-        const edgeScore = (projection - line).toFixed(1);
+        const edgeDifference = projection - line;
+        const edgeScore = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
         
         document.getElementById('playerDisplay').textContent = `${data.playerName} (${data.playerTeam})`;
         document.getElementById('defenseDisplay').textContent = data.opponentTeam;
@@ -870,10 +871,10 @@
         let interpretation = '';
         let interpretClass = '';
 
-        if (edgeScore >= 1.5) {
+        if (edgeDifference >= 1.5) {
             interpretation = 'GOOD EDGE - Positive value';
             interpretClass = 'score-high';
-        } else if (edgeScore >= 0) {
+        } else if (edgeDifference >= 0) {
             interpretation = 'MIXED EDGE - Proceed with caution';
             interpretClass = 'score-medium';
         } else {
