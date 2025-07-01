@@ -615,7 +615,7 @@
                 
                 <div class="input-group">
                     <label for="bettingLine">Betting Line (Receptions)</label>
-                    <input type="number" id="bettingLine" placeholder="e.g., 5.5" step="0.5" min="0" max="15">
+                    <input type="number" id="bettingLine" placeholder="e.5, 5.5" step="0.5" min="0" max="15">
                     <div class="info-text">Over/Under line for player receptions</div>
                 </div>
                 
@@ -888,7 +888,7 @@
                                     playerName: playerName,
                                     team: team,
                                     opponentTeam: opponentTeam,
-                                    expectedReceptions: projection.expectedReceptions,
+                                    expectedReceptions: parseFloat(projection.expectedReceptions), // Ensure it's a number for sorting
                                     edgeScore: edgeDifference
                                 });
                             }
@@ -896,8 +896,8 @@
                     }
                 }
 
-                // Sort projections by absolute edge score (highest edge, positive or negative, first)
-                allProjections.sort((a, b) => Math.abs(b.edgeScore) - Math.abs(a.edgeScore));
+                // Sort projections by expectedReceptions (descending)
+                allProjections.sort((a, b) => b.expectedReceptions - a.expectedReceptions);
 
                 // Display top 50
                 allProjections.slice(0, 50).forEach(proj => {
@@ -905,19 +905,23 @@
                     itemDiv.classList.add('bulk-result-item');
 
                     let edgeClass = '';
-                    if (proj.edgeScore >= 1.5) {
+                    // Use the original betting line for edge calculation/display
+                    const currentBettingLine = DEFAULT_BETTING_LINE; 
+                    const actualEdgeDifference = proj.expectedReceptions - currentBettingLine;
+
+                    if (actualEdgeDifference >= 1.5) {
                         edgeClass = 'good-edge';
-                    } else if (proj.edgeScore >= 0) {
+                    } else if (actualEdgeDifference >= 0) {
                         edgeClass = 'mixed-edge';
                     } else {
                         edgeClass = 'poor-edge';
                     }
                     
-                    const edgeScoreFormatted = (proj.edgeScore >= 0 ? '+' : '') + proj.edgeScore.toFixed(1);
+                    const edgeScoreFormatted = (actualEdgeDifference >= 0 ? '+' : '') + actualEdgeDifference.toFixed(1);
 
                     itemDiv.innerHTML = `
                         <span class="bulk-result-label">${proj.playerName} (${proj.team}) vs ${proj.opponentTeam}</span>
-                        <span class="bulk-result-value">${proj.expectedReceptions} Rec</span>
+                        <span class="bulk-result-value">${proj.expectedReceptions.toFixed(1)} Rec</span>
                         <span class="bulk-result-value ${edgeClass}">${edgeScoreFormatted} Edge</span>
                     `;
                     bulkResultsList.appendChild(itemDiv);
