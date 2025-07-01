@@ -796,25 +796,7 @@
                             <option value="18">Week 18</option>
                         </select>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="bulkTeam">Team</label>
-                        <select id="bulkTeam">
-                            <option value="">All Teams</option>
-                        </select>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="bulkGameFlow">Game Flow</label>
-                        <select id="bulkGameFlow">
-                            <option value="3">Neutral (Even matchup)</option>
-                            <option value="1">Heavy Favorite (14+ point favorite)</option>
-                            <option value="2">Slight Favorite (7-13 point favorite)</option>
-                            <option value="4">Slight Underdog (7-13 point underdog)</option>
-                            <option value="5">Heavy Underdog (14+ point underdog)</option>
-                        </select>
-                    </div>
-                </div>
                 
                 <button class="calculate-btn" id="bulkCalculateBtn">Run Bulk Analysis</button>
                 
@@ -881,7 +863,7 @@
     <script>
         // Define Supabase constants globally, BEFORE any other logic
         const SUPABASE_URL = 'https://pyjtwdgapmbdgtpflzan.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImexcCf6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
         const SEASON = 2024; // Player stats (player_cover_stats, defensive_coverages, defensive_matchups)
         const BULK_SEASON = 2025; // Weekly matchups (weekly_matchups)
 
@@ -918,7 +900,7 @@
             setupPasswordHandling();
             setupModeToggle();
             setupAutocomplete(); 
-            setupBulkTeams();
+            // setupBulkTeams(); // No longer needed as Team input is removed
             document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
             document.getElementById('bulkCalculateBtn').addEventListener('click', runBulkAnalysis);
             document.getElementById('exportBtn').addEventListener('click', exportResults);
@@ -988,31 +970,14 @@
             });
         }
 
-        async function setupBulkTeams() {
-            const bulkTeamSelect = document.getElementById('bulkTeam');
-            const teams = [
-                'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills',
-                'Carolina Panthers', 'Chicago Bears', 'Cincinnati Bengals', 'Cleveland Browns',
-                'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
-                'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars', 'Kansas City Chiefs',
-                'Las Vegas Raiders', 'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins',
-                'Minnesota Vikings', 'New England Patriots', 'New Orleans Saints', 'New York Giants',
-                'New York Jets', 'Philadelphia Eagles', 'Pittsburgh Steelers', 'San Francisco 49ers',
-                'Seattle Seahawks', 'Tampa Bay Buccaneers', 'Tennessee Titans', 'Washington Commanders'
-            ];
-
-            teams.forEach(team => {
-                const option = document.createElement('option');
-                option.value = team;
-                option.textContent = team;
-                bulkTeamSelect.appendChild(option);
-            });
-        }
+        // setupBulkTeams() is no longer needed as Team input is removed
+        // async function setupBulkTeams() { /* ... */ }
 
         async function runBulkAnalysis() {
             const week = document.getElementById('bulkWeek').value;
-            const team = document.getElementById('bulkTeam').value;
-            const gameFlow = parseInt(document.getElementById('bulkGameFlow').value);
+            // Removed team and gameFlow inputs as they are now hardcoded
+            const routesPerGame = 30; // Hardcoded for bulk analysis
+            const gameFlow = 3;      // Hardcoded to Neutral for bulk analysis
 
             showBulkLoading(true);
             hideBulkResults();
@@ -1069,16 +1034,15 @@
                 console.log(`Found ${matchups.length} matchups for Season ${BULK_SEASON}.`);
 
                 // Get players (using SEASON for player_cover_stats)
+                // Remove team filter as we are calculating for all teams
                 let playerQuery = supabaseClient
                     .from('player_cover_stats')
                     .select('player_name, team, tprr_player')
                     .eq('season', SEASON) // Player stats from SEASON (2024)
                     .eq('coverage_type', 'Overall')
                     .order('tprr_player', { ascending: false }); 
-
-                if (team) {
-                    playerQuery = playerQuery.eq('team', team);
-                }
+                
+                // Removed the 'if (team)' condition here.
 
                 console.log(`Fetching players for Season ${SEASON}...`);
                 const { data: players, error: playerError } = await playerQuery;
@@ -1120,8 +1084,8 @@
                             const result = await calculatePlayerProjection(
                                 player.player_name,
                                 opponent,
-                                gameFlow,
-                                35, 
+                                gameFlow,        // Hardcoded to Neutral (3)
+                                routesPerGame,   // Hardcoded to 30
                                 5.5 // Default betting line, as it's not filtered in bulk
                             );
 
@@ -1133,7 +1097,6 @@
                                 });
                             }
                         } catch (error) {
-                            // Log the error but don't stop the entire bulk analysis for one player
                             console.warn(`Skipping projection for ${player.player_name} vs ${opponent} (Week ${matchup.week}) due to error: ${error.message}`);
                         }
                     }
@@ -1173,7 +1136,7 @@
 
                 if (!playerData || playerData.length === 0) {
                     console.warn(`Player "${playerName}" (Season ${SEASON}) not found or no overall stats. Using simple projection.`);
-                    const result = calculateSimpleProjection(playerName, null, opponentTeam, 0.15, routesPerGame, gameFlow); // Default target share if player not found
+                    const result = calculateSimpleProjection(playerName, null, opponentTeam, 0.15, routesPerGame, gameFlow); 
                     return { ...result, bettingLine: bettingLine, playerTeam: 'N/A' };
                 }
 
@@ -1215,7 +1178,7 @@
                     .select('coverage_type, tprr_player, separation_score')
                     .eq('player_name', playerName)
                     .eq('team', playerTeam)
-                    .eq('season', SEASON) // Player coverage stats from SEASON (2024)
+                    .eq('season', SEASON) 
                     .in('coverage_type', ['Man Coverage', 'Cover 2', 'Cover 3', 'Cover 4', 'Cover 6']);
 
                 if (statsError) {
@@ -1247,7 +1210,7 @@
                 });
 
                 if (totalWeight === 0) {
-                    console.warn(`No valid coverage data for ${playerName} from fetched stats. Using simple projection.`);
+                    console.warn(`No valid coverage data for ${playerName} from fetched stats to calculate weighted scores. Using simple projection.`);
                     const result = calculateSimpleProjection(playerName, playerTeam, opponentTeam, targetShare, routesPerGame, gameFlow);
                     return { ...result, bettingLine: bettingLine };
                 }
@@ -1264,13 +1227,12 @@
                     .from('defensive_matchups')
                     .select('tprr_allowed, catch_rate_allowed')
                     .eq('defensive_team_name', opponentTeam)
-                    .eq('season', SEASON) // Defensive matchup stats from SEASON (2024)
+                    .eq('season', SEASON) 
                     .eq('coverage_type', mostFrequent.name)
                     .limit(1);
                 
                 if (defMatchupError) {
                     console.error(`Error fetching defensive_matchups for ${opponentTeam} (Season ${SEASON}):`, defMatchupError);
-                    // Continue with default, don't throw an error to allow projection
                 }
 
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
@@ -1300,8 +1262,8 @@
                     tprr: stats.tprr_player.toFixed(1),
                     sepScore: stats.separation_score.toFixed(3),
                     expectedReceptions: result.expectedReceptions,
-                    bettingLine: bettingLine, // Passed for completeness, though not used in bulk display
-                    edgeScore: edgeScore // Calculated for completeness
+                    bettingLine: bettingLine, 
+                    edgeScore: edgeScore 
                 };
 
             } catch (error) {
@@ -1317,13 +1279,13 @@
             
             return {
                 playerName,
-                playerTeam: playerTeam || 'N/A', // Ensure team is set even if player data not found
+                playerTeam: playerTeam || 'N/A', 
                 opponentTeam,
                 targetShare: (effectiveTPRR * 100).toFixed(1),
                 tprr: (effectiveTPRR * 100).toFixed(1),
                 sepScore: "0.200", 
                 expectedReceptions: baseProjection.toFixed(1),
-                edgeScore: 0 // Default edge score for simple projection
+                edgeScore: 0 
             };
         }
 
@@ -1331,7 +1293,7 @@
             const resultsCount = document.getElementById('resultsCount');
             const resultsList = document.getElementById('bulkResultsList');
             
-            resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`; // Reflects the slice to 40
+            resultsCount.textContent = `Top ${bulkResults.length} players by projected receptions`; 
             
             if (bulkResults.length === 0) {
                 resultsList.innerHTML = '<div class="loading">No players found matching criteria or no projections generated for this week.</div>';
@@ -1462,7 +1424,7 @@
             const routesPerGame = parseInt(document.getElementById('routesPerGame').value);
             const bettingLine = parseFloat(document.getElementById('bettingLine').value);
 
-            if (!playerName || !opponentTeam || isNaN(routesPerGame) || isNaN(bettingLine)) { // Added NaN checks
+            if (!playerName || !opponentTeam || isNaN(routesPerGame) || isNaN(bettingLine)) { 
                 showError('Please fill in all fields with valid numbers where required.');
                 return;
             }
@@ -1654,7 +1616,6 @@
                 
                 if (defMatchupError) {
                     console.error(`Error fetching defensive_matchups for ${opponentTeam} (Season ${SEASON}):`, defMatchupError);
-                    // Do not throw error, let it use default defMatchup
                 }
 
                 const defMatchup = defStats && defStats[0] ? defStats[0] : { tprr_allowed: 0.185, catch_rate_allowed: 63 };
@@ -1675,7 +1636,8 @@
                 );
 
                 const projection = parseFloat(result.expectedReceptions);
-                const edgeScore = projection - bettingLine;
+                const edgeDifference = projection - bettingLine; // Calculate difference for display
+                const edgeScore = (edgeDifference >= 0 ? '+' : '') + edgeDifference.toFixed(1);
 
                 displayResults({
                     playerName,
@@ -1688,8 +1650,9 @@
                     tprr: stats.tprr_player.toFixed(1),
                     sepScore: stats.separation_score.toFixed(3),
                     expectedReceptions: result.expectedReceptions,
-                    receptionScore: result.finalScore,
-                    bettingLine: bettingLine
+                    receptionScore: result.finalScore, // This is the overall model score
+                    bettingLine: bettingLine,
+                    edgeScore: edgeScore // Pass edgeScore explicitly for display
                 });
 
             } catch (error) {
@@ -1773,7 +1736,7 @@
             document.getElementById('tprrDisplay').textContent = `${data.tprr}%`;
             document.getElementById('sepScoreDisplay').textContent = data.sepScore;
             document.getElementById('expectedReceptions').textContent = data.expectedReceptions;
-            document.getElementById('finalScore').textContent = edgeScore;
+            document.getElementById('finalScore').textContent = edgeScore; // Displaying calculated edge score
 
             let interpretation = '';
             let interpretClass = '';
