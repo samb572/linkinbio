@@ -758,7 +758,7 @@
             const normalizedSep = Math.pow(Math.min(sepBase, 12), 2);
 
             // Volume Factor
-            const volumeFactor = Math.min((targetShare * routesPerGame) / 100, 100);
+            const volumeFactor = Math.min((targetShare * routesPerGame) / 10, 100);
 
             // Matchup Factor
             const defTPRRDiff = Math.max(0, defTPRR - 18.5);
@@ -777,7 +777,7 @@
 
             // Quality Multiplier
             let qualityMultiplier = 1.0;
-            if (tprr < 20) {
+            if (tprr < 18) {
                 qualityMultiplier = 0.75;
             }
 
