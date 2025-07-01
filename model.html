@@ -748,13 +748,13 @@
         const coverageAdjustment = performanceDiff * coverageImpact;
         const adjustedTPRR = tprr + coverageAdjustment;
 
-        // Coverage Adjusted TPRR (linear dampening)
+        // Coverage Adjusted TPRR (moderate exponential dampening)
         const coverageAdjBase = (adjustedTPRR / 25) * 10;
-        const coverageAdjTPRR = Math.min(coverageAdjBase * 1.5, 120);
+        const coverageAdjTPRR = Math.min(Math.pow(coverageAdjBase, 1.7), 140);
 
-        // Normalized Separation (linear dampening)
+        // Normalized Separation (moderate exponential dampening)
         const sepBase = (sepScore / 0.25) * 10;
-        const normalizedSep = Math.min(sepBase * 1.5, 120);
+        const normalizedSep = Math.min(Math.pow(sepBase, 1.7), 140);
 
         // Volume Factor
         const volumeFactor = Math.min((targetShare * routesPerGame) / 10, 100);
