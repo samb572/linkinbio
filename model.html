@@ -629,6 +629,34 @@
             document.getElementById('calculateBtn').addEventListener('click', calculateProjection);
         });
 
+        // --- Security Enhancements ---
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Disable F12 and other common developer tool shortcuts
+        document.addEventListener('keydown', function(e) {
+            // F12 key
+            if (e.keyCode === 123) {
+                e.preventDefault();
+            }
+            // Ctrl+Shift+I (Cmd+Option+I for Mac)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+                e.preventDefault();
+            }
+            // Ctrl+Shift+J (Cmd+Option+J for Mac)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+                e.preventDefault();
+            }
+            // Ctrl+U (Cmd+U for Mac) - View Source
+            if (e.ctrlKey && e.keyCode === 85) {
+                e.preventDefault();
+            }
+        });
+        // --- End Security Enhancements ---
+
+
         function setupPasswordHandling() {
             const passwordOverlay = document.getElementById('passwordOverlay');
             const mainContent = document.getElementById('mainContent');
@@ -637,7 +665,7 @@
             const passwordError = document.getElementById('passwordError');
 
             function checkPassword() {
-                const correctPassword = 'KT81qd2023#';
+                const correctPassword = 'EdgingClearly';
                 if (passwordInput.value === correctPassword) {
                     passwordOverlay.style.display = 'none';
                     mainContent.style.display = 'block';
