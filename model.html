@@ -613,6 +613,10 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5anR3ZGdhcG1iZGd0cGZsemFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNTEzNTgsImV4cCI6MjA2NjcyNzM1OH0._Bt_XomEPAYRqC6zNgkNDwq66XFlpMoPbNMB6Eb4USo';
         const SEASON = 2024;
 
+        // Fixed autocomplete functionality
+        let allPlayers = [];
+        let allTeams = [];
+
         window.addEventListener('load', function() {
             if (typeof window.supabase !== 'undefined') {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -978,10 +982,12 @@
         }
 
         // Autocomplete functionality
-        let allPlayers = [];
-        let allTeams = [];
+        // These are now global and populated by fetchAutocompleteData
+        // let allPlayers = []; 
+        // let allTeams = [];
 
         async function fetchAutocompleteData() {
+            console.log('Fetching autocomplete data...');
             try {
                 const { data: players, error: playerError } = await supabaseClient
                     .from('player_cover_stats')
@@ -989,132 +995,164 @@
                     .eq('season', SEASON)
                     .eq('coverage_type', 'Overall');
 
-                if (playerError) throw playerError;
+                if (playerError) {
+                    console.error('Player fetch error:', playerError);
+                    throw playerError;
+                }
+                
+                console.log('Players fetched:', players?.length || 0);
                 allPlayers = [...new Set(players.map(p => p.player_name))].sort();
+                console.log('Unique players:', allPlayers.length);
 
                 const { data: teams, error: teamError } = await supabaseClient
                     .from('defensive_coverages')
                     .select('team_name')
                     .eq('season', SEASON);
 
-                if (teamError) throw teamError;
+                if (teamError) {
+                    console.error('Team fetch error:', teamError);
+                    throw teamError;
+                }
+                
+                console.log('Teams fetched:', teams?.length || 0);
                 allTeams = [...new Set(teams.map(t => t.team_name))].sort();
+                console.log('Unique teams:', allTeams.length);
+
+                // Enable autocomplete after data is loaded
+                setupAutocompleteInputs();
 
             } catch (error) {
-                console.error('Error fetching autocomplete data:', error.message);
-                // Optionally show a user-friendly error message
+                console.error('Error fetching autocomplete data:', error);
+                // Show user-friendly error message
+                showError('Failed to load autocomplete data. Please refresh the page.');
             }
         }
 
         function setupAutocomplete() {
-            fetchAutocompleteData(); // Fetch data on load
+            // Call fetchAutocompleteData and wait for it to complete
+            fetchAutocompleteData();
+        }
 
+        function setupAutocompleteInputs() {
             const playerNameInput = document.getElementById('playerName');
-            const playerSuggestionsDiv = document.getElementById('playerSuggestions');
-            
             const opponentTeamInput = document.getElementById('opponentTeam');
-            const teamSuggestionsDiv = document.getElementById('teamSuggestions');
 
-            function createSuggestions(inputElement, suggestionsDiv, dataList) {
-                let currentFocus = -1;
-
-                inputElement.addEventListener('input', function() {
-                    const val = this.value;
-                    closeAllLists();
-                    if (!val) { return false; }
-                    currentFocus = -1;
-                    
-                    const a = document.createElement('div');
-                    a.setAttribute('id', this.id + 'autocomplete-list');
-                    a.setAttribute('class', 'autocomplete-suggestions');
-                    this.parentNode.appendChild(a);
-
-                    let count = 0;
-                    for (let i = 0; i < dataList.length; i++) {
-                        if (dataList[i].toUpperCase().includes(val.toUpperCase()) && count < 10) { // Limit to 10 suggestions
-                            const b = document.createElement('div');
-                            b.setAttribute('class', 'autocomplete-suggestion');
-                            b.innerHTML = '<strong>' + dataList[i].substr(0, val.length) + '</strong>';
-                            b.innerHTML += dataList[i].substr(val.length);
-                            b.innerHTML += '<input type="hidden" value="' + dataList[i] + '">';
-                            b.addEventListener('click', function() {
-                                inputElement.value = this.getElementsByTagName('input')[0].value;
-                                closeAllLists();
-                            });
-                            a.appendChild(b);
-                            count++;
-                        }
-                    }
-                    if (count > 0) {
-                        a.style.display = 'block';
-                    }
-                });
-
-                inputElement.addEventListener('keydown', function(e) {
-                    let x = document.getElementById(this.id + 'autocomplete-list');
-                    if (x) x = x.getElementsByClassName('autocomplete-suggestion');
-                    if (e.keyCode == 40) { // Arrow Down
-                        currentFocus++;
-                        addActive(x);
-                    } else if (e.keyCode == 38) { // Arrow Up
-                        currentFocus--;
-                        addActive(x);
-                    } else if (e.keyCode == 13) { // Enter
-                        e.preventDefault();
-                        if (currentFocus > -1) {
-                            if (x) x[currentFocus].click();
-                        }
-                    }
-                });
-
-                function addActive(x) {
-                    if (!x) return false;
-                    removeActive(x);
-                    if (currentFocus >= x.length) currentFocus = 0;
-                    if (currentFocus < 0) currentFocus = (x.length - 1);
-                    x[currentFocus].classList.add('selected');
-                }
-
-                function removeActive(x) {
-                    for (let i = 0; i < x.length; i++) {
-                        x[i].classList.remove('selected');
-                    }
-                }
-
-                function closeAllLists(elmnt) {
-                    const x = document.getElementsByClassName('autocomplete-suggestions');
-                    for (let i = 0; i < x.length; i++) {
-                        if (elmnt != x[i] && elmnt != inputElement) {
-                            x[i].parentNode.removeChild(x[i]);
-                        }
-                    }
-                }
-
-                document.addEventListener('click', function (e) {
-                    closeAllLists(e.target);
-                });
+            if (!playerNameInput || !opponentTeamInput) {
+                console.error('Autocomplete input elements not found');
+                return;
             }
 
-            createSuggestions(playerNameInput, playerSuggestionsDiv, allPlayers);
-            createSuggestions(opponentTeamInput, teamSuggestionsDiv, allTeams);
+            createSuggestions(playerNameInput, allPlayers);
+            createSuggestions(opponentTeamInput, allTeams);
         }
 
-        function showLoading(isLoading) {
-            document.getElementById('loadingDiv').style.display = isLoading ? 'block' : 'none';
-        }
+        function createSuggestions(inputElement, dataList) {
+            let currentFocus = -1;
+            let suggestionsContainer = null;
 
-        function showError(message) {
-            const errorDiv = document.getElementById('errorDiv');
-            errorDiv.textContent = `Error: ${message}`;
-            errorDiv.style.display = 'block';
-        }
+            inputElement.addEventListener('input', function() {
+                const val = this.value.trim();
+                closeAllLists();
+                
+                if (!val || val.length < 2) { 
+                    return false; 
+                }
+                
+                currentFocus = -1;
+                
+                // Create suggestions container
+                suggestionsContainer = document.createElement('div');
+                suggestionsContainer.setAttribute('class', 'autocomplete-suggestions');
+                suggestionsContainer.style.display = 'none'; // Initially hidden
+                
+                // Insert after the input element
+                this.parentNode.appendChild(suggestionsContainer);
 
-        function hideError() {
-            document.getElementById('errorDiv').style.display = 'none';
-        }
+                let count = 0;
+                const maxSuggestions = 8;
+                
+                for (let i = 0; i < dataList.length && count < maxSuggestions; i++) {
+                    if (dataList[i].toLowerCase().includes(val.toLowerCase())) {
+                        const suggestionDiv = document.createElement('div');
+                        suggestionDiv.setAttribute('class', 'autocomplete-suggestion');
+                        
+                        // Highlight the matching part
+                        const index = dataList[i].toLowerCase().indexOf(val.toLowerCase());
+                        const beforeMatch = dataList[i].substring(0, index);
+                        const match = dataList[i].substring(index, index + val.length);
+                        const afterMatch = dataList[i].substring(index + val.length);
+                        
+                        suggestionDiv.innerHTML = beforeMatch + '<strong>' + match + '</strong>' + afterMatch;
+                        
+                        suggestionDiv.addEventListener('click', function() {
+                            inputElement.value = dataList[i];
+                            closeAllLists();
+                        });
+                        
+                        suggestionsContainer.appendChild(suggestionDiv);
+                        count++;
+                    }
+                }
+                
+                if (count > 0) {
+                    suggestionsContainer.style.display = 'block';
+                }
+            });
 
-        function hideResults() {
-            document.getElementById('results').style.display = 'none';
+            inputElement.addEventListener('keydown', function(e) {
+                if (!suggestionsContainer) return;
+                
+                const suggestions = suggestionsContainer.getElementsByClassName('autocomplete-suggestion');
+                
+                if (e.keyCode === 40) { // Arrow Down
+                    currentFocus++;
+                    addActive(suggestions);
+                    e.preventDefault();
+                } else if (e.keyCode === 38) { // Arrow Up
+                    currentFocus--;
+                    addActive(suggestions);
+                    e.preventDefault();
+                } else if (e.keyCode === 13) { // Enter
+                    e.preventDefault();
+                    if (currentFocus > -1 && suggestions[currentFocus]) {
+                        suggestions[currentFocus].click();
+                    }
+                } else if (e.keyCode === 27) { // Escape
+                    closeAllLists();
+                }
+            });
+
+            function addActive(suggestions) {
+                if (!suggestions) return false;
+                removeActive(suggestions);
+                if (currentFocus >= suggestions.length) currentFocus = 0;
+                if (currentFocus < 0) currentFocus = (suggestions.length - 1);
+                if (suggestions[currentFocus]) {
+                    suggestions[currentFocus].classList.add('selected');
+                }
+            }
+
+            function removeActive(suggestions) {
+                for (let i = 0; i < suggestions.length; i++) {
+                    suggestions[i].classList.remove('selected');
+                }
+            }
+
+            function closeAllLists() {
+                const suggestions = document.getElementsByClassName('autocomplete-suggestions');
+                for (let i = suggestions.length - 1; i >= 0; i--) {
+                    suggestions[i].parentNode.removeChild(suggestions[i]);
+                }
+                suggestionsContainer = null;
+                currentFocus = -1;
+            }
+
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function (e) {
+                if (e.target !== inputElement) {
+                    closeAllLists();
+                }
+            });
         }
     </script>
 </body>
