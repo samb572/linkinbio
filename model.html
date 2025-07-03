@@ -725,22 +725,21 @@
                 const playerRoutesRun = playerData[0].routes_run;
                 const playerGamesPlayed = playerData[0].g;
 
-                let calculatedRoutesPerGame = routesPerGameInput.value; // Start with current input value
+                let routesPerGame; // Declare routesPerGame here
 
-                // Automate routesPerGame if data is available and valid
-                if (playerRoutesRun !== null && playerGamesPlayed !== null && playerGamesPlayed > 0) {
-                    calculatedRoutesPerGame = (playerRoutesRun / playerGamesPlayed).toFixed(1);
-                    routesPerGameInput.value = calculatedRoutesPerGame; // Pre-fill the input field
+                // Check if the user has manually entered a value for routesPerGame
+                const manualRoutesPerGame = parseFloat(routesPerGameInput.value);
+                if (!isNaN(manualRoutesPerGame) && manualRoutesPerGame > 0) {
+                    routesPerGame = manualRoutesPerGame; // Use manual input if valid
+                } else if (playerRoutesRun !== null && playerGamesPlayed !== null && playerGamesPlayed > 0) {
+                    // Otherwise, try to calculate automatically
+                    routesPerGame = (playerRoutesRun / playerGamesPlayed).toFixed(1);
+                    routesPerGameInput.value = routesPerGame; // Pre-fill the input field with calculated value
                 } else {
-                    // If automated calculation is not possible, ensure user has provided a manual value
-                    if (!routesPerGameInput.value || parseFloat(routesPerGameInput.value) <= 0) {
-                         throw new Error(`Routes Per Game could not be automatically calculated for ${playerName}. Please enter a value manually.`);
-                    }
+                    // If neither manual nor automatic calculation is possible
+                    throw new Error(`Routes Per Game could not be automatically calculated for ${playerName}. Please enter a value manually.`);
                 }
                 
-                // Use the value from the input field (which might be calculated or manually overridden)
-                const routesPerGame = parseFloat(routesPerGameInput.value);
-
                 // 2. Get opponent's coverage frequencies
                 const { data: coverageData, error: coverageError } = await supabaseClient
                     .from('defensive_coverages')
