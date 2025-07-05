@@ -890,7 +890,7 @@
         function calculateReceptionScore(weightedTPRR, weightedSeparation, targetShare, routesPerGame, gameFlow, primaryCoverageFreq, defTPRR, defCatchRate) {
             // === ADVANCED STATISTICAL MODEL ===
             
-            // 1. EFFICIENCY COMPONENT (40% weight)
+            // 1. EFFICIENCY COMPONENT (30% weight)
             // Convert weighted TPRR to z-score vs NFL average (18.5% mean, 5.0% std dev)
             const tprrZScore = (weightedTPRR - 18.5) / 5.0;
             const efficiencyScore = Math.max(0, 50 + (tprrZScore * 15)); // 50 baseline ± 45 range
@@ -901,11 +901,11 @@
             const volumeScore = Math.min(totalOpportunity * 2.5, 100); // Linear scaling, natural cap at 40 targets
             
             // 3. SEPARATION COMPONENT (15% weight) 
-            // Convert separation to z-score vs NFL average (0.20 mean, 0.05 std dev)
-            const separationZScore = (weightedSeparation - 0.20) / 0.05;
+            // Convert separation to z-score vs NFL average (0.15 mean, 0.05 std dev)
+            const separationZScore = (weightedSeparation - 0.15) / 0.05;
             const separationScore = Math.max(0, 50 + (separationZScore * 12)); // ±36 range
             
-            // 4. DEFENSIVE MATCHUP COMPONENT (15% weight)
+            // 4. DEFENSIVE MATCHUP COMPONENT (25% weight)
             // Bidirectional - good defenses hurt score, bad defenses help
             const defTPRRZScore = (defTPRR - 18.5) / 3.0; // Defense has smaller variance
             const defCatchZScore = (defCatchRate - 63.0) / 5.0; // Average 63% catch rate vs WRs
@@ -917,10 +917,10 @@
             const gameScriptMultiplier = 0.85 + (gameFlow * 0.075);
             
             // === COMBINE COMPONENTS ===
-            const baseScore = (efficiencyScore * 0.40) + 
+            const baseScore = (efficiencyScore * 0.30) + 
                                 (volumeScore * 0.30) + 
                                 (separationScore * 0.15) + 
-                                (matchupScore * 0.15);
+                                (matchupScore * 0.25);
             
             const finalScore = Math.min(baseScore * gameScriptMultiplier, 100);
             
@@ -932,7 +932,7 @@
             let confidenceFactor = 1.0;
             if (finalScore >= 80) confidenceFactor = 1.15;      // High confidence boost
             else if (finalScore >= 65) confidenceFactor = 1.05; // Moderate confidence boost  
-            else if (finalScore >= 35) confidenceFactor = 1.0;  // Neutral
+            else if (finalScore >= 50) confidenceFactor = 1.0;  // Neutral
             else if (finalScore >= 20) confidenceFactor = 0.95; // Low confidence reduction
             else confidenceFactor = 0.85;                        // Very low confidence reduction
             
